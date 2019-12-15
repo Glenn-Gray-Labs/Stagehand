@@ -13,7 +13,8 @@ namespace Plugins.Stagehand.Work {
 
 		public override bool MoveNext() {
 			if (Stopwatch.GetTimestamp() < _endTime) return true;
-			return base.MoveNext();
+			if (then == null) return false;
+			return then.MoveNext();
 		}
 	}
 }

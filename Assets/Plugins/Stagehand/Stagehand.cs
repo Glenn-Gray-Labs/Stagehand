@@ -1,27 +1,26 @@
-﻿using System.Threading;
-using Plugins.Stagehand.Core;
+﻿using Plugins.Stagehand.Core;
 
 namespace Plugins.Stagehand {
 	public static class Stagehand {
-		public static void Do(IWork work) {
+		public static void Do(Job job) {
 			void Run() {
-				while (work.MoveNext()) {
+				while (job.MoveNext()) {
 					//
 				}
 
-				var then = work.GetThen();
-				if (then != null) work = then;
+				/*var then = job.GetThen();
+				if (then != null) job = then;*/
 			}
 
 			// Main Thread
-			//Run();
+			Run();
 
 			// New Thread
-			new Thread(Run).Start();
+			//new Thread(Run).Start();
 		}
 
-		public static void Do(params IWork[] works) {
-			Do(new Jobs(works));
+		public static void Do(params Job[] jobs) {
+			Do(new Jobs(jobs));
 		}
 	}
 }

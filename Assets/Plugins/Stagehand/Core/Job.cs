@@ -2,52 +2,44 @@
 using System.Collections.Generic;
 
 namespace Plugins.Stagehand.Core {
-	public class Job : IWork {
-		protected IWork _then;
+	public class Job : IEnumerator<Job> {
+		private IEnumerator<Job> _current;
+		protected IEnumerator<Job> then;
 
-		public IWork Current { get; set; }
+		public Job Current => null;
 		object IEnumerator.Current => null;
 
 		public Job() {
-			Current = this;
+			_current = this;
 		}
 
-		public Job(IWork work) {
-			Current = work;
-		}
-
-		public Job(IEnumerator<IWork> work) {
-			Current = work.Current;
+		public Job(IEnumerator<Job> work) {
+			_current = work;
 		}
 
 		public virtual bool MoveNext() {
 			// TODO: This is awful. Can't we use a delegate (without indirection) instead of this concrete implementation?
-			if (Current == null) {
-				if (_then == null) return false;
-				return _then.MoveNext();
-				;
+			if (_current == null) {
+				if (then == null) return false;
+				return then.MoveNext();
 			}
 
-			if (Current.MoveNext()) return true;
-			Current = null;
-			return _then != null;
+			if (_current.MoveNext()) return true;
+			_current = null;
+			return then != null;
 		}
 
 		public virtual void Reset() {
-			Current.Reset();
+			_current.Reset();
 		}
 
-		public virtual IWork Then(IWork then) {
-			_then = then;
+		public virtual Job Then(IEnumerator<Job> then) {
+			this.then = then;
 			return this;
 		}
 
-		public virtual IWork Then(IEnumerator<IWork> then) {
-			return Then(then.Current);
-		}
-
-		public virtual IWork GetThen() {
-			return _then;
+		public virtual IEnumerator<Job> GetThen() {
+			return then;
 		}
 
 		public virtual void Dispose() {
