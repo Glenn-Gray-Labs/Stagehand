@@ -1,21 +1,16 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Plugins.Stagehand.Core {
-	public class Jobs : IWork {
+	public class Jobs : Job {
 		private readonly Queue<IWork> _works;
 		private int _counter;
-
-		private IWork _then;
-
-		object IEnumerator.Current => null;
 
 		public Jobs(params IWork[] works) {
 			_works = new Queue<IWork>(works);
 			_counter = _works.Count;
 		}
 
-		public bool MoveNext() {
+		public override bool MoveNext() {
 			if (_counter == 0) return false;
 
 			do {
@@ -31,18 +26,9 @@ namespace Plugins.Stagehand.Core {
 			return true;
 		}
 
-		public void Reset() {
+		public override void Reset() {
 			_counter = 0;
 			_works.Clear();
-		}
-
-		public IWork Then(IWork then) {
-			_then = then;
-			return this;
-		}
-
-		public IWork GetThen() {
-			return _then;
 		}
 	}
 }

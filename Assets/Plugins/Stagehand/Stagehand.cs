@@ -3,8 +3,7 @@ using Plugins.Stagehand.Core;
 
 namespace Plugins.Stagehand {
 	public static class Stagehand {
-		public static void Do(params IWork[] works) {
-			var work = (works.Length == 1) ? works[0] : new Jobs(works);
+		public static void Do(IWork work) {
 			void Run() {
 				while (work.MoveNext()) {
 					//
@@ -15,10 +14,14 @@ namespace Plugins.Stagehand {
 			}
 
 			// Main Thread
-			Run();
+			//Run();
 
 			// New Thread
 			new Thread(Run).Start();
+		}
+
+		public static void Do(params IWork[] works) {
+			Do(new Jobs(works));
 		}
 	}
 }
