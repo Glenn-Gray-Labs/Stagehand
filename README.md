@@ -1,2 +1,2 @@
 # Stagehand
-The last concurrency framework you'll ever use.
+Write better code with this powerful concurrency framework for games and apps.
