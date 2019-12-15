@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Plugins.Stagehand.Core;
 
-namespace Plugins.Stagehand.Work {
+namespace Plugins.Stagehand.Jobs {
 	public class Sleep : Job {
 		private long _duration;
 		private long _endTime;
@@ -13,8 +13,7 @@ namespace Plugins.Stagehand.Work {
 
 		public override bool MoveNext() {
 			if (Stopwatch.GetTimestamp() < _endTime) return true;
-			if (then == null) return false;
-			return then.MoveNext();
+			return base.MoveNext();
 		}
 	}
 }

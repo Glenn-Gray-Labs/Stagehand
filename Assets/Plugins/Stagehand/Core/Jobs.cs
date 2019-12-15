@@ -6,7 +6,7 @@ namespace Plugins.Stagehand.Core {
 		private readonly Queue<IEnumerator> _works;
 		private int _counter;
 
-		public Jobs(params Job[] works) {
+		public Jobs(params IEnumerator<Job>[] works) {
 			_works = new Queue<IEnumerator>(works);
 			_counter = _works.Count;
 		}
@@ -20,9 +20,9 @@ namespace Plugins.Stagehand.Core {
 			} while (--_counter > 0);
 
 			_counter = _works.Count;
-			if (_counter > 0 || then == null) return true;
+			if (_counter > 0 || next == null) return true;
 
-			_works.Enqueue(then);
+			_works.Enqueue(next);
 			_counter = 1;
 			return true;
 		}

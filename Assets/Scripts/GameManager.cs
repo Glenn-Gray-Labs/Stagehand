@@ -1,24 +1,22 @@
 ﻿using System.Collections.Generic;
 using Plugins.Stagehand;
 using Plugins.Stagehand.Core;
-using Plugins.Stagehand.Work;
+using Plugins.Stagehand.Jobs;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour {
 	static GameManager() {
-		var job = _timerFinished("0.5");
-
-		Stagehand.Do(new Sleep(0.5f).Then(job));
+		Stagehand.Do(_log("IEnumerator<Job>", new Log("Job")));
 
 		Stagehand.Do(
-			new Sleep(1f).Then(_timerFinished("1.0")),
-			new Sleep(2f).Then(_timerFinished("2.0")),
-			new Sleep(0.5f).Then(_timerFinished("0.5"))
+			new Sleep(1f).SetNext(new Log("1.0")),
+			new Sleep(2f).SetNext(new Log("2.0")),
+			new Sleep(0.5f).SetNext(new Log("0.5"))
 		);
 	}
 
-	private static IEnumerator<Job> _timerFinished(string duration) {
-		Debug.Log($"Timer Finished: {duration}s");
-		yield break;
+	private static IEnumerator<Job> _log(string message, Job job = null) {
+		Debug.Log(message);
+		yield return job;
 	}
 }
