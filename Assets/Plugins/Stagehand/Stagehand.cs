@@ -12,7 +12,7 @@ namespace Plugins.Stagehand {
 			}
 
 			// Main Thread
-			Run();
+			//Run();
 
 			// New Thread
 			new Thread(Run).Start();
