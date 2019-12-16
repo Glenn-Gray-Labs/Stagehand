@@ -3,17 +3,14 @@ using Plugins.Stagehand.Core;
 
 namespace Plugins.Stagehand.Jobs {
 	public class Sleep : Job {
-		private long _duration;
-		private long _endTime;
+		private readonly long _endTime;
 
 		public Sleep(float durationInSeconds) {
-			_duration = (long) (10000000L * durationInSeconds);
-			_endTime = Stopwatch.GetTimestamp() + _duration;
+			_endTime = Stopwatch.GetTimestamp() + (long) (10000000L * durationInSeconds);
 		}
 
 		public override bool MoveNext() {
-			if (Stopwatch.GetTimestamp() < _endTime) return true;
-			return base.MoveNext();
+			return Stopwatch.GetTimestamp() < _endTime;
 		}
 	}
 }

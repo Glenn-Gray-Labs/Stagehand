@@ -2,7 +2,7 @@
 
 namespace Plugins.Stagehand.Jobs {
 	public class Log : Job {
-		private string _message;
+		private readonly string _message;
 
 		public Log(string message) {
 			_message = message;
@@ -10,7 +10,7 @@ namespace Plugins.Stagehand.Jobs {
 
 		public override bool MoveNext() {
 			UnityEngine.Debug.Log(_message);
-			return base.MoveNext();
+			return false;
 		}
 	}
 }

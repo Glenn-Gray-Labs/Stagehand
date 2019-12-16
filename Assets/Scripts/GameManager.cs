@@ -5,7 +5,13 @@ using Plugins.Stagehand.Jobs;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour {
+	private struct Config {
+		public string Name;
+	}
+
 	static GameManager() {
+		Stagehand.Do(new Job<Config>(new Log("Job")));
+
 		Stagehand.Do(_log("IEnumerator<Job>", new Log("Job")));
 
 		Stagehand.Do(

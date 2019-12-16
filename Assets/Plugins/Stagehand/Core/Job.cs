@@ -3,9 +3,10 @@ using System.Collections.Generic;
 
 namespace Plugins.Stagehand.Core {
 	public class Job : IEnumerator<Job> {
-		protected IEnumerator<Job> next;
+		//protected IEnumerator<Job> next;
 
-		public Job Current => null;
+		public Job Current { get; protected set; }
+
 		object IEnumerator.Current => null;
 
 		protected Job() {
@@ -13,8 +14,9 @@ namespace Plugins.Stagehand.Core {
 		}
 
 		public virtual bool MoveNext() {
-			if (next == null) return false;
-			return next.MoveNext();
+			/*if (next == null) return false;
+			return next.MoveNext();*/
+			return false;
 		}
 
 		public virtual void Reset() {
@@ -22,16 +24,25 @@ namespace Plugins.Stagehand.Core {
 		}
 
 		public virtual Job SetNext(IEnumerator<Job> work) {
-			next = work;
+			//next = work;
 			return this;
 		}
 
 		public virtual IEnumerator<Job> GetNext() {
-			return next;
+			return null;
+			//return next;
 		}
 
 		public virtual void Dispose() {
 			//
+		}
+	}
+
+	public class Job<T> : Job {
+		public static T value;
+
+		public Job(Job job) {
+			Current = job;
 		}
 	}
 }
