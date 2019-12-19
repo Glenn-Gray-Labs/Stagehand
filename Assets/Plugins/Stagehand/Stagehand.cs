@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Threading;
 
 namespace Plugins.Stagehand {
 	public static class Stagehand {
@@ -13,7 +12,10 @@ namespace Plugins.Stagehand {
 			}
 
 			// New Thread
-			new Thread(Run).Start(job);
+			//new Thread(Run).Start(job);
+
+			// Main Thread
+			Run(job);
 		}
 	}
 }

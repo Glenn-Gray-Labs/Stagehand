@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 
 namespace Plugins.Stagehand.Core {
+	// TODO: Debugging information (like StackTrace) is lost inside a Job. Research ways to collect and display complete debugging information in DEBUG builds.
 	public class Job<T> : IEnumerator<Job<T>> {
 		protected static T value;
 
