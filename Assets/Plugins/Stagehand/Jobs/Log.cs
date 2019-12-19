@@ -1,7 +1,7 @@
 ﻿using Plugins.Stagehand.Core;
 
 namespace Plugins.Stagehand.Jobs {
-	public class Log : Job {
+	public class Log<T> : Job<T> {
 		private readonly string _message;
 
 		public Log(string message) {

@@ -2,7 +2,7 @@
 using Plugins.Stagehand.Core;
 
 namespace Plugins.Stagehand.Jobs {
-	public class Sleep : Job {
+	public class Sleep<T> : Job<T> {
 		private readonly long _endTime;
 
 		public Sleep(float durationInSeconds) {

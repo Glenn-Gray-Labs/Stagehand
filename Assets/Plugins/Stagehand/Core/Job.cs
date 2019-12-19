@@ -2,11 +2,10 @@
 using System.Collections.Generic;
 
 namespace Plugins.Stagehand.Core {
-	public class Job : IEnumerator<Job> {
-		//protected IEnumerator<Job> next;
+	public class Job<T> : IEnumerator<Job<T>> {
+		protected static T value;
 
-		public Job Current { get; protected set; }
-
+		public Job<T> Current => null;
 		object IEnumerator.Current => null;
 
 		protected Job() {
@@ -14,8 +13,6 @@ namespace Plugins.Stagehand.Core {
 		}
 
 		public virtual bool MoveNext() {
-			/*if (next == null) return false;
-			return next.MoveNext();*/
 			return false;
 		}
 
@@ -23,26 +20,8 @@ namespace Plugins.Stagehand.Core {
 			//
 		}
 
-		public virtual Job SetNext(IEnumerator<Job> work) {
-			//next = work;
-			return this;
-		}
-
-		public virtual IEnumerator<Job> GetNext() {
-			return null;
-			//return next;
-		}
-
 		public virtual void Dispose() {
 			//
-		}
-	}
-
-	public class Job<T> : Job {
-		public static T value;
-
-		public Job(Job job) {
-			Current = job;
 		}
 	}
 }
