@@ -2,80 +2,120 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
+using Plugins.Stagehand.Types.Threads;
 using UnityEngine;
 
 namespace Plugins.Stagehand {
-	// Associate Types with Threads
-	internal static class Stagehand<T> {
-		public static int Thread = (Stagehand.NextThread++ % Environment.ProcessorCount) + 1;
-
+	// Automatic Type Association
+	public static class Stagehand<TLeft, TRight> {
 		static Stagehand() {
-			Debug.Log($"{typeof(T)}: {Thread}");
+			Debug.Log($"Stagehand<{typeof(TLeft)}, {typeof(TRight)}>");
+		}
+
+		public static void Stage(IEnumerator job = null) {
+			// TODO
 		}
 	}
 
-	public interface IThreadMain {
-	}
+	public static class Stagehand<T> {
+		// Work Queue
+		private static readonly Queue<IEnumerator> _queue = new Queue<IEnumerator>();
 
-	public interface IThread0 {
-	}
+		// Links T and TRight
+		private static class Link<TRight> {
+			static Link() {
+				Debug.Log($"Link: {typeof(T)}, {typeof(TRight)}");
+			}
 
-	public interface IThread1 {
-	}
-
-	public interface IThread2 {
-	}
-
-	public interface IThread3 {
-	}
-
-	public static class Stagehand {
-		// One Queue Per (Logical) Processor
-		private static readonly List<Queue<IEnumerator>> _queues;
-
-		// Used
-		public static int NextThread = 0;
-
-		static Stagehand() {
-			// Initialize the Consumer Queues
-			_queues = new List<Queue<IEnumerator>>(Environment.ProcessorCount);
-
-			// Start Queue Consumers
-			for (var processor = 0; processor < Environment.ProcessorCount; ++processor) {
-				new Thread(thread => {
-					//Stagehand<IThreadMain>.Thread++;
-
-					var queue = _queues[(int) thread];
-					for (;;) {
-						if (queue.Count == 0) {
-							Thread.Sleep(8);
-							continue;
-						}
-
-						try {
-							var current = queue.Dequeue();
-							Debug.Log($"Thread Consuming: {thread}");
-							while (current.MoveNext()) {
-								// Execute the Job...
-							}
-						} catch (Exception e) {
-							Debug.LogException(e);
-						}
-					}
-				}).Start(processor);
+			public static void Stage() {
+				Debug.Log($"Link.Stage: {typeof(T)}, {typeof(TRight)}");
 			}
 		}
 
-		public static void Subscribe<T>(IEnumerator job) {
-			// TODO: Add thread safety.
-			Debug.Log($"{typeof(T)}: {Stagehand<T>.Thread}");
-			_queues[Stagehand<T>.Thread].Enqueue(job);
+		// T
+		static Stagehand() {
+			Debug.Log($"Stagehand<{typeof(T)}>");
 		}
 
-		public static void Setup<T>(int thread) {
-			// Setup the Type
-			Debug.Log($"{typeof(T)}: {Stagehand<T>.Thread}: {thread}");
-			Stagehand<T>.Thread = thread;
+		// Stage Work
+		public static void Stage(IEnumerator job = null) {
+			// Link the Types
+			//Link<T>.Stage();
+
+			// Consume the Work
+			void Consumer() {
+				for (;;) {
+					// Waiting...
+					while (_queue.Count > 0) {
+						Debug.Log($"Thread<{typeof(T)}>: Consuming...");
+
+						void RunJob(IEnumerator _job) {
+							while (_job.MoveNext()) {
+								Debug.Log($"Thread<{typeof(T)}>: Running...");
+								if (_job.Current != null) {
+									Debug.Log($"Thread<{typeof(T)}>: Inception...");
+									RunJob((IEnumerator) _job.Current);
+								}
+							}
+						}
+
+						RunJob(_queue.Dequeue());
+					}
+				}
+			}
+
+			// Start the Thread?
+			_queue.Enqueue(job);
+			new Thread(Consumer).Start();
+		}
+
+		public static void Execute() {
+			// TODO
+		}
+	}
+
+	internal static class Stagehand {
+		static Stagehand() {
+#if DEBUG
+			// NOTICE: If this ever happens, please make a pull request to increase the maximum number of supported threads.
+			if (Environment.ProcessorCount > 4) {
+				Debug.LogWarning("Stagehand does not support thread affinity to all of your logical processors.");
+			}
+#endif
+
+			// Start Consumers
+			Stagehand<IThreadMain>.Stage();
+			Stagehand<IThread1>.Stage();
+			Stagehand<IThread2>.Stage();
+			Stagehand<IThread3>.Stage();
+		}
+
+		public static void Stage<T>() {
+			// TODO: Check the Type Links
+
+			Stagehand<T>.Stage();
+		}
+
+		public static void Stage<TLeft, TRight>() {
+			// TODO: Check the Type Links
+
+			// Doubly Link Types
+			Stagehand<TRight>.Stage();
+			Stagehand<TLeft>.Stage();
+		}
+
+		public static void Stage<T>(IEnumerator job) {
+			// TODO: Check the Type Links
+
+			Stagehand<T>.Stage();
+		}
+
+		public static void Stage<TLeft, TRight>(IEnumerator job) {
+			// TODO: Check the Type Links
+
+			// Doubly Link Types
+			Stagehand<TRight>.Stage();
+			Stagehand<TLeft>.Stage();
 		}
 	}
 }
