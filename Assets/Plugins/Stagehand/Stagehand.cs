@@ -3,18 +3,19 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
-using Plugins.Stagehand.Types;
 using Plugins.Stagehand.Types.Threads;
 using UnityEngine;
+using Random = System.Random;
 
 namespace Plugins.Stagehand {
 	// Automatic Type Association
 	public static class Stagehand<TLeft, TRight> {
-		public static bool Linked;
-
 		// TLeft, TRight
 		static Stagehand() {
 			Debug.Log($"Stagehand<{typeof(TLeft)}, {typeof(TRight)}>");
+
+			if (Stagehand<TLeft>._root == null) Stagehand<TLeft>._root = typeof(TRight);
+			if (Stagehand<TRight>._root == null) Stagehand<TRight>._root = typeof(TLeft);
 		}
 
 		public static void Stage(IEnumerator job) {
@@ -25,9 +26,11 @@ namespace Plugins.Stagehand {
 	}
 
 	public static class Stagehand<T> {
+		internal static Type _root;
+
 		// T
 		static Stagehand() {
-			Debug.Log($"Stagehand<{typeof(T)}>");
+			//
 		}
 
 		// Consume the Job
@@ -36,7 +39,6 @@ namespace Plugins.Stagehand {
 			for (;;) {
 				// Waiting...
 				while (queue.Count > 0) {
-					Debug.Log($"Thread<{typeof(T)}>: Consuming...");
 					_execute(queue.Dequeue());
 				}
 			}
@@ -44,40 +46,37 @@ namespace Plugins.Stagehand {
 
 		internal static void _consume(Queue<IEnumerator> queue) {
 			// Start the Thread!
-			new Thread(_consumer).Start(queue);
+			new Thread(_consumer) {
+				Name = queue.ToString(),
+			}.Start(queue);
 		}
 
 		// Stage Job
 		public static void Stage(IEnumerator job = null) {
-			// 
-			if (!Stagehand<IRootNode, T>.Linked) {
+			// Add a Job to a Queue
+			if (_root == null) {
+				// Any Queue Will Do!
+				var queue = new Random().Next(1, Stagehand.Queues.Count - 1);
+				Stagehand.Queues[queue].Enqueue(job);
+			} else {
+				// TODO: Thread Affinity!
+				Stagehand.Queues[0].Enqueue(job);
 			}
-
-			// TODO: Get a Queue to Push To!
-			Stagehand.Queues[0].Enqueue(job);
-
-			// Link the Types
-
-			//Link<T>.Stage();
-
-			// Add a Job to the Queue
-			//queue.Enqueue(job);
 		}
 
 		private static void _execute(IEnumerator job) {
+			// Execute the Job
 			while (job.MoveNext()) {
-				Debug.Log($"Thread<{typeof(T)}>: Running...");
 				if (job.Current != null) {
-					Debug.Log($"Thread<{typeof(T)}>: Inception...");
 					_execute((IEnumerator) job.Current);
 				}
 			}
 		}
 
 		public static void Execute() {
+			// Consume the IThreadMain Queue
 			var queue = Stagehand.Queues[0];
 			while (queue.Count > 0) {
-				Debug.Log("Executing...");
 				_execute(queue.Dequeue());
 			}
 		}
@@ -99,8 +98,6 @@ namespace Plugins.Stagehand {
 		});
 
 		static Stagehand() {
-			Debug.Log("Stagehand!");
-
 #if DEBUG
 			// NOTICE: If this ever happens, please make a pull request to increase the maximum number of supported threads.
 			if (Environment.ProcessorCount > Consumers.Count) {
@@ -109,7 +106,6 @@ namespace Plugins.Stagehand {
 #endif
 
 			// Start Consumers
-			//Stagehand<IThreadMain>._consume(Queues[0]);
 			Stagehand<IThread1>._consume(Queues[1]);
 			Stagehand<IThread2>._consume(Queues[2]);
 			Stagehand<IThread3>._consume(Queues[3]);
