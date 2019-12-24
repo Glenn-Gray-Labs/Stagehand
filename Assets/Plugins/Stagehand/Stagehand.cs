@@ -7,19 +7,29 @@ using Plugins.Stagehand.Types.Threads;
 using UnityEngine;
 using Random = System.Random;
 
+// TODO: Look for a way to build a tree structure out of the generic template types.
+
 namespace Plugins.Stagehand {
 	// Automatic Type Association
 	public static class Stagehand<TLeft, TRight> {
 		// TLeft, TRight
 		static Stagehand() {
-			Debug.Log($"Stagehand<{typeof(TLeft)}, {typeof(TRight)}>");
-
-			if (Stagehand<TLeft>._root == null) Stagehand<TLeft>._root = typeof(TRight);
-			if (Stagehand<TRight>._root == null) Stagehand<TRight>._root = typeof(TLeft);
+			if (Stagehand<TLeft>._root == null) {
+				Stagehand<TLeft>._root = typeof(TRight);
+			} else if (Stagehand<TRight>._root == null) {
+				Stagehand<TRight>._root = typeof(TLeft);
+			}
 		}
 
 		public static void Stage(IEnumerator job) {
 			// TODO: Fetch the Queue for TLeft and/or TRight
+			if (Stagehand<TLeft>._root != typeof(TRight)) {
+				Debug.Log(Stagehand<TLeft>._root);
+				Debug.Log(Stagehand<TRight>._root);
+			} else {
+				Debug.Log(Stagehand<TLeft>._root);
+				Debug.Log(Stagehand<TRight>._root);
+			}
 
 			Stagehand<TRight>.Stage(job);
 		}
