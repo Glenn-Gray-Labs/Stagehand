@@ -1,5 +1,4 @@
-﻿using Plugins.Stagehand.Types.Threads;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace Plugins.Stagehand.Vendors.Unity {
 	public class StagehandMonoBehaviour : MonoBehaviour {
@@ -14,11 +13,11 @@ namespace Plugins.Stagehand.Vendors.Unity {
 		// come up, and they cannot be ignored.
 #if UNITY_EDITOR
 		private void OnValidate() {
-			Stagehand<IThreadMain>.Execute();
+			Stagehand.ExecuteThreadMain();
 		}
 #else
 		private void Update() {
-			Stagehand<IThreadMain>.Execute();
+			Stagehand.ExecuteThreadMain();
 		}
 #endif
 	}
