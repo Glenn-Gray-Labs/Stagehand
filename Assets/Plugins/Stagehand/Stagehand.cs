@@ -9,21 +9,12 @@ using Debug = UnityEngine.Debug;
 namespace Plugins.Stagehand {
 	public static class Stagehand<T> {
 		private static T _value;
-		private static readonly Type _mainThreadType = typeof(IThreadMain);
-
-		/******************************************************************************************************************/
-		// Modified From: https://github.com/thomas-villagers/avltree.cs/blob/master/src/avltree.cs
-		/******************************************************************************************************************/
-		// TODO: This implementation should be rewritten, or at least fortified with some statistical analysis,
-		//       serialization, and caches.
-		/******************************************************************************************************************/
-		private static readonly Node root = new Node(typeof(T));
 
 		public static void Stage(IEnumerator job) {
-			if (root.Find(_mainThreadType) != null || typeof(T) == _mainThreadType) {
+			if (root.Find(Stagehand._mainThreadNode)._value.Type == typeof(IThreadMain) || typeof(T) == typeof(IThreadMain)) {
 				Stagehand._mainThreadExecutor.AddLast(job);
 			} else {
-				Stagehand.Executors[1].AddLast(job);
+				Stagehand.Executors[Stagehand._nextExecutor = Stagehand._nextExecutor % Stagehand.ExecutorCount + 1].AddLast(job);
 			}
 		}
 
@@ -34,7 +25,13 @@ namespace Plugins.Stagehand {
 
 		public static void Stage<TChild>(IEnumerator job) {
 			// Add Relationship to Tree
-			root.Insert(typeof(T));
+			if (typeof(T) == typeof(IThreadMain)) {
+				Stagehand<TChild>.root.Insert(Stagehand._mainThreadNode);
+			} else {
+				Stagehand<TChild>.root.Insert(new Stagehand.NodeValue {
+					Type = typeof(T),
+				});
+			}
 
 			// Stage the Work in the Child
 			Stagehand<TChild>.Stage(job);
@@ -44,31 +41,41 @@ namespace Plugins.Stagehand {
 			return job(_value);
 		}
 
+		/******************************************************************************************************************/
+		// Modified From: https://github.com/thomas-villagers/avltree.cs/blob/master/src/avltree.cs
+		/******************************************************************************************************************/
+		// TODO: This implementation should be rewritten, or at least fortified with some statistical analysis,
+		//       serialization, and caches.
+		/******************************************************************************************************************/
+		private static readonly Node root = new Node(new Stagehand.NodeValue {
+			Type = typeof(T),
+		});
+
 		internal class Node {
-			public readonly Type value;
-			public int height;
-			public Node left;
-			Node parent;
-			public Node right;
+			internal readonly Stagehand.NodeValue _value;
+			int _height;
+			Node _left;
+			Node _parent;
+			Node _right;
 
-			internal Node(Type value) {
-				this.value = value;
-				height = 1;
+			internal Node(Stagehand.NodeValue value) {
+				_value = value;
+				_height = 1;
 			}
 
-			private Node(Type value, Node parent) {
-				this.value = value;
-				this.parent = parent;
-				height = 1;
+			private Node(Stagehand.NodeValue value, Node parent) {
+				_value = value;
+				_parent = parent;
+				_height = 1;
 			}
 
-			private int compare(Type left, Type right) {
-				var leftValue = left == null ? 0 : left.GetHashCode();
-				var rightValue = right == null ? 0 : right.GetHashCode();
+			private int compare(Stagehand.NodeValue left, Stagehand.NodeValue right) {
+				var leftValue = left.Type == null ? 0 : left.Type.GetHashCode();
+				var rightValue = right.Type == null ? 0 : right.Type.GetHashCode();
 				return leftValue - rightValue;
 			}
 
-			internal Node Insert(Type value) {
+			internal Node Insert(Stagehand.NodeValue value) {
 				Node Insert(ref Node node) {
 					if (node == null) {
 						node = new Node(value, this);
@@ -78,104 +85,102 @@ namespace Plugins.Stagehand {
 						Node newRoot = node;
 						bool restructured = false;
 						while (v != null) {
-							if (!restructured && Math.Abs(ChildHeight(v.left) - ChildHeight(v.right)) > 1) {
+							if (!restructured && Math.Abs(ChildHeight(v._left) - ChildHeight(v._right)) > 1) {
 								var y = v.ChildWithMaxHeight();
 								var x = y.ChildWithMaxHeight();
-								Node a, b, c;
+								Node left, center, right;
 								Node T1, T2;
-								if (x == y.left && y == v.left) {
-									a = x;
-									b = y;
-									c = v;
-									T1 = a.right;
-									T2 = b.right;
-								} else if (x == y.right && y == v.right) {
-									a = v;
-									b = y;
-									c = x;
-									T1 = b.left;
-									T2 = c.left;
-								} else if (x == y.left && y == v.right) {
-									a = v;
-									b = x;
-									c = y;
-									T1 = b.left;
-									T2 = b.right;
+								if (x == y._left && y == v._left) {
+									left = x;
+									center = y;
+									right = v;
+									T1 = left._right;
+									T2 = center._right;
+								} else if (x == y._right && y == v._right) {
+									left = v;
+									center = y;
+									right = x;
+									T1 = center._left;
+									T2 = right._left;
+								} else if (x == y._left && y == v._right) {
+									left = v;
+									center = x;
+									right = y;
+									T1 = center._left;
+									T2 = center._right;
 								} else {
-									a = y;
-									b = x;
-									c = v;
-									T1 = b.left;
-									T2 = b.right;
+									left = y;
+									center = x;
+									right = v;
+									T1 = center._left;
+									T2 = center._right;
 								}
 
-								if (v.parent != null) {
-									if (v == v.parent.left)
-										v.parent.left = b;
-									else v.parent.right = b;
+								if (v._parent != null) {
+									if (v == v._parent._left)
+										v._parent._left = center;
+									else v._parent._right = center;
 								}
 
-								b.parent = v.parent;
+								center._parent = v._parent;
 
-								b.left = a;
-								a.parent = b;
-								b.right = c;
-								c.parent = b;
+								center._left = left;
+								left._parent = center;
+								center._right = right;
+								right._parent = center;
 
-								a.right = T1;
-								if (T1 != null) T1.parent = a;
-								c.left = T2;
-								if (T2 != null) T2.parent = c;
-								a.height = 1 + a.MaxChildHeight();
-								b.height = 1 + b.MaxChildHeight();
-								c.height = 1 + c.MaxChildHeight();
+								left._right = T1;
+								if (T1 != null) T1._parent = left;
+								right._left = T2;
+								if (T2 != null) T2._parent = right;
+								left._height = 1 + left.MaxChildHeight();
+								center._height = 1 + center.MaxChildHeight();
+								right._height = 1 + right.MaxChildHeight();
 
-								v = b;
+								v = center;
 
 								restructured = true;
 							}
 
-							v.height = 1 + v.MaxChildHeight();
+							v._height = 1 + v.MaxChildHeight();
 							newRoot = v;
-							v = v.parent;
+							v = v._parent;
 						}
 
 						return newRoot;
-					} else
-						return node.Insert(value);
+					}
+					
+					return node.Insert(value);
 				}
 
-				if (compare(value, this.value) < 0) {
-					return Insert(ref left);
-				} else {
-					return Insert(ref right);
-				}
+				return compare(value, _value) < 0 ? Insert(ref _left) : Insert(ref _right);
 			}
 
-			internal Node Find(Type value) {
-				int cmp = compare(this.value, value);
+			internal Node Find(Stagehand.NodeValue value) {
+				var cmp = compare(_value, value);
 				if (cmp == 0) return this;
-				if (cmp > 0) return left.Find(value);
-				return right.Find(value);
+				if (_left != null && cmp > 0) return _left.Find(value);
+				return _right == null ? this : _right.Find(value);
 			}
 
 			private static int ChildHeight(Node child) {
-				return (child == null) ? 0 : child.height;
+				return child?._height ?? 0;
 			}
 
 			private int MaxChildHeight() {
-				return Math.Max(ChildHeight(left), ChildHeight(right));
+				return Math.Max(ChildHeight(_left), ChildHeight(_right));
 			}
 
 			private Node ChildWithMaxHeight() {
-				return (ChildHeight(left) > ChildHeight(right)) ? left : right;
+				return (ChildHeight(_left) > ChildHeight(_right)) ? _left : _right;
 			}
 		}
-
 		/******************************************************************************************************************/
 	}
 
 	public static class Stagehand {
+		internal static int _nextExecutor;
+
 		public const int ExecutorCount = 3; // Be sure this matches the number of Executors, minus one.
 
 		internal static readonly Executor[] Executors = {
@@ -278,7 +283,17 @@ namespace Plugins.Stagehand {
 				}
 			}
 		}
-
+		/******************************************************************************************************************/
+		
+		/******************************************************************************************************************/
+		// Tree
+		/******************************************************************************************************************/
+		internal struct NodeValue {
+			public Type Type;
+		}
+		internal static NodeValue _mainThreadNode = new NodeValue {
+			Type = typeof(IThreadMain),
+		}; 
 		/******************************************************************************************************************/
 	}
 }
