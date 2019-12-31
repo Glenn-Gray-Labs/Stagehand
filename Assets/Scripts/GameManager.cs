@@ -7,7 +7,7 @@ using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 public class GameManager : MonoBehaviour {
-	private struct Config {
+	private class Config {
 		public string ConfigName;
 	}
 
@@ -17,13 +17,12 @@ public class GameManager : MonoBehaviour {
 
 	static GameManager() {
 		// 1. Load Config
+		var _config = new Config();
 		IEnumerator _readConfig(Config config) {
 			config.ConfigName = "Config Read";
 			yield break;
 		}
-
-		var _config = new Config();
-		Stagehand<Config>.Stage(_config, Stagehand.ConsecutiveParallelJobs(
+		Stagehand<Config>.Stage(Stagehand.ConsecutiveParallelJobs(
 			_log<Config>($"1"),
 			_nestedLog<Main>($"2", $"3"),
 			Stagehand.ConsecutiveJobs(
@@ -36,8 +35,7 @@ public class GameManager : MonoBehaviour {
 				_log<Config>($"4"),
 				_nestedLog<Main>($"5", $"6")
 			),
-			Stagehand.ConsecutiveJobs(Stagehand.Sleep(0.3f), Stagehand<Config>.Inject(_readConfig)),
-			_readConfig(_config)
+			Stagehand.ConsecutiveJobs(Stagehand.Sleep(0.3f), _readConfig(_config))
 		));
 
 		// 2. Thread Affinity
@@ -46,16 +44,13 @@ public class GameManager : MonoBehaviour {
 
 		// 3. Load Main
 		IEnumerator _processConfig(Config config) {
-			Debug.Log($"_processConfig Started: {config.ConfigName}");
-			if (config.ConfigName == null) {
-				Debug.Log($"_processConfig Waiting...");
+			Log($"_processConfig Started: {config.ConfigName}");
+			while (config.ConfigName == null) {
 				yield return null;
 			}
-
-			Debug.Log($"_processConfig Finished: {config.ConfigName}");
+			Log($"_processConfig Finished: {config.ConfigName}");
 		}
-
-		Stagehand<Config>.Stage<Main>(Stagehand<Config>.Inject(_processConfig));
+		Stagehand<Config>.Stage<Main>(_processConfig(_config));
 	}
 
 	private static readonly long _firstTime = Stopwatch.GetTimestamp();
