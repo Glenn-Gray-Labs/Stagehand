@@ -8,6 +8,7 @@ using Debug = UnityEngine.Debug;
 
 namespace Plugins.Stagehand {
 	public static class Stagehand<T> {
+		// TODO: Implement per-type queues: search for nearest unresolved dependency in the type chain then add work to result.
 		private static T _value;
 
 		public static void Stage(IEnumerator job) {
