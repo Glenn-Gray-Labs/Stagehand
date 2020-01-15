@@ -7,18 +7,21 @@ using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 public class GameManager : MonoBehaviour {
-	private static readonly long _firstTime = Stopwatch.GetTimestamp();
-	private static long _lastTime = _firstTime;
+	private class Config {
+		public string ConfigName;
+	}
+
+	private struct Main {
+		public string MainName;
+	}
 
 	static GameManager() {
 		// 1. Load Config
 		var _config = new Config();
-
 		IEnumerator _readConfig(Config config) {
 			config.ConfigName = "Config Read";
 			yield break;
 		}
-
 		Stagehand<Config>.Stage(Stagehand.ConsecutiveParallelJobs(
 			_log<Config>($"1"),
 			_nestedLog<Main>($"2", $"3"),
@@ -45,12 +48,13 @@ public class GameManager : MonoBehaviour {
 			while (config.ConfigName == null) {
 				yield return null;
 			}
-
 			_log($"_processConfig Finished: {config.ConfigName}");
 		}
-
 		Stagehand<Config>.Stage<Main>(_processConfig(_config));
 	}
+
+	private static readonly long _firstTime = Stopwatch.GetTimestamp();
+	private static long _lastTime = _firstTime;
 
 	private static void _log(string message) {
 		var thisTime = Stopwatch.GetTimestamp();
@@ -72,13 +76,5 @@ public class GameManager : MonoBehaviour {
 		}
 
 		yield return InnerLog();
-	}
-
-	private class Config {
-		public string ConfigName;
-	}
-
-	private struct Main {
-		public string MainName;
 	}
 }

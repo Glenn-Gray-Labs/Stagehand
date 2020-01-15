@@ -8,17 +8,6 @@ using Debug = UnityEngine.Debug;
 
 namespace Plugins.Stagehand {
 	public static class Stagehand<T> {
-		/******************************************************************************************************************/
-		// Modified From: https://github.com/thomas-villagers/avltree.cs/blob/master/src/avltree.cs
-		/******************************************************************************************************************/
-		// TODO: This implementation should be rewritten, or at least fortified with some statistical analysis,
-		//       serialization, and caches.
-		/******************************************************************************************************************/
-		private static readonly Node _root = typeof(T) == typeof(IThreadMain)
-			? new Node(Stagehand._mainThreadNode)
-			: new Node(new Stagehand.NodeValue {
-				Type = typeof(T),
-			});
 		// TODO: Track the position of T vs TChild in the queue... for more efficient inserts.
 
 		public static void Stage(IEnumerator job) {
@@ -42,6 +31,16 @@ namespace Plugins.Stagehand {
 			// Stage the Work in the Child
 			Stagehand<TChild>.Stage(job);
 		}
+
+		/******************************************************************************************************************/
+		// Modified From: https://github.com/thomas-villagers/avltree.cs/blob/master/src/avltree.cs
+		/******************************************************************************************************************/
+		// TODO: This implementation should be rewritten, or at least fortified with some statistical analysis,
+		//       serialization, and caches.
+		/******************************************************************************************************************/
+		private static readonly Node _root = typeof(T) == typeof(IThreadMain) ? new Node(Stagehand._mainThreadNode) : new Node(new Stagehand.NodeValue {
+			Type = typeof(T),
+		});
 
 		internal class Node {
 			internal readonly Stagehand.NodeValue _value;
@@ -68,13 +67,11 @@ namespace Plugins.Stagehand {
 
 					// Re-Balance Tree:
 					var newRoot = node;
-
 					void Restructure() {
 						node._height = 1 + node._maxChildHeight();
 						newRoot = node;
 						node = node._parent;
 					}
-
 					while (node != null) {
 						if (Math.Abs(_childHeight(node._left) - _childHeight(node._right)) > 1) {
 							var y = node._childWithMaxHeight();
@@ -138,10 +135,8 @@ namespace Plugins.Stagehand {
 						// Restructure Node...
 						Restructure();
 					}
-
 					return newRoot;
 				}
-
 				return _compare(value, _value) < 0 ? Insert(_left) : Insert(_right);
 			}
 
@@ -170,13 +165,13 @@ namespace Plugins.Stagehand {
 				return _childHeight(_left) > _childHeight(_right) ? _left : _right;
 			}
 		}
-
 		/******************************************************************************************************************/
 	}
 
 	public static class Stagehand {
-		public const int ExecutorCount = 3; // Be sure this matches the number of Executors, minus one.
 		internal static int _nextExecutor;
+
+		public const int ExecutorCount = 3; // Be sure this matches the number of Executors, minus one.
 
 		internal static readonly Executor[] Executors = {
 			new Executor(), // IThreadMain
@@ -186,10 +181,6 @@ namespace Plugins.Stagehand {
 		};
 
 		internal static readonly Executor _mainThreadExecutor = Executors[0];
-
-		internal static NodeValue _mainThreadNode = new NodeValue {
-			Type = typeof(IThreadMain),
-		};
 
 		static Stagehand() {
 #if DEBUG
@@ -290,7 +281,9 @@ namespace Plugins.Stagehand {
 		internal struct NodeValue {
 			public Type Type;
 		}
-
+		internal static NodeValue _mainThreadNode = new NodeValue {
+			Type = typeof(IThreadMain),
+		}; 
 		/******************************************************************************************************************/
 	}
 }
