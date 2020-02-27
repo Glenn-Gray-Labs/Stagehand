@@ -1,13 +1,10 @@
 ﻿using System.Collections;
-using System.Diagnostics;
-using System.Threading;
+using System.Collections.Generic;
 using Plugins.Stagehand;
-using Plugins.Stagehand.Types.Threads;
 using UnityEngine;
-using Debug = UnityEngine.Debug;
 
 public class GameManager : MonoBehaviour {
-	private class Config {
+	public struct Config {
 		public string ConfigName;
 	}
 
@@ -15,9 +12,71 @@ public class GameManager : MonoBehaviour {
 		public string MainName;
 	}
 
+	/*private class FileWatcher : IEnumerator {
+		public interface IFile {
+			//
+		}
+
+		static FileWatcher() {
+			Stagehand<FileWatcher>.Attach(new FileWatcher());
+		}
+
+		private FileWatcher() {
+			//
+		}
+	}*/
+
+	public class ConfigFile : IEnumerator<Config> {
+		private string _filename;
+
+		public ConfigFile(string filename) {
+			Debug.Log($"ConfigFile({_filename})");
+			_filename = filename;
+		}
+
+		public bool MoveNext() {
+			Debug.Log($"ConfigFile({_filename}).MoveNext()");
+			return false;
+		}
+
+		public void Reset() {
+			throw new System.NotImplementedException();
+		}
+
+		public Config Current { get; }
+
+		object IEnumerator.Current => Current;
+
+		public void Dispose() {
+			throw new System.NotImplementedException();
+		}
+	}
+
 	static GameManager() {
+		IEnumerator _watchFile(string filename) {
+			Debug.Log($"_watchFile({filename})");
+			yield return new WaitForSeconds(0.1f);
+		}
+
+		IEnumerator _downloadUri(string uri) {
+			Debug.Log($"_downloadUri({uri})");
+			yield return new WaitForSeconds(0.2f);
+		}
+
+		IEnumerator _parseConfig(Config config) {
+			Debug.Log($"_parseConfig({config.ConfigName})");
+			config.ConfigName = "Config Read";
+			yield break;
+		}
+
+		Hand<Config>.To(new ConfigFile("stagehand.json"));
+		//Hand<ConfigFile>.To(_watchFile);
+		Hand<Config>.To(_downloadUri("http://www.google.com"));
+
+		Hand<MonoBehaviour>.To(_downloadUri("http://www.google.com"));
+		
 		// 1. Load Config
-		var _config = new Config();
+		/*var _config = new Config();
 		IEnumerator _readConfig(Config config) {
 			config.ConfigName = "Config Read";
 			yield break;
@@ -50,10 +109,10 @@ public class GameManager : MonoBehaviour {
 			}
 			_log($"_processConfig Finished: {config.ConfigName}");
 		}
-		Stagehand<Config>.Stage<Main>(_processConfig(_config));
+		Stagehand<Config>.Stage<Main>(_processConfig(_config));*/
 	}
 
-	private static readonly long _firstTime = Stopwatch.GetTimestamp();
+	/*private static readonly long _firstTime = Stopwatch.GetTimestamp();
 	private static long _lastTime = _firstTime;
 
 	private static void _log(string message) {
@@ -76,5 +135,5 @@ public class GameManager : MonoBehaviour {
 		}
 
 		yield return InnerLog();
-	}
+	}*/
 }

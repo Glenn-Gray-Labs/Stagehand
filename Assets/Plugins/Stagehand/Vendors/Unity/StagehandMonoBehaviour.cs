@@ -13,11 +13,11 @@ namespace Plugins.Stagehand.Vendors.Unity {
 		// come up, and they cannot be ignored.
 #if UNITY_EDITOR
 		private void OnValidate() {
-			Stagehand.ExecuteThreadMain();
+			StartCoroutine(Hand<MonoBehaviour>.To());
 		}
 #else
-		private void Update() {
-			Stagehand.ExecuteThreadMain();
+		private void OnEnable() {
+			StartCoroutine(Hand<MonoBehaviour>.To());
 		}
 #endif
 	}
