@@ -1,14 +1,22 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading;
+using System.Linq;
 using Plugins.Backstage;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 public class GameManager : MonoBehaviour {
 	public class Config {
-		public string ConfigName;
+		public readonly Queue<long> times = new Queue<long>();
+
+		public void Time(long time) {
+			times.Enqueue(time);
+		}
+
+		public string Times() {
+			return string.Join(", ", times.Select(x => x.ToString()).ToArray());
+		}
 	}
 
 	public static IEnumerator Sleep(float durationInSeconds) {
@@ -20,84 +28,42 @@ public class GameManager : MonoBehaviour {
 		public string MainName;
 	}
 
-	GameManager() {
-		IEnumerator _watchFile(string filename) {
-			Debug.Log($"beg_watchFile({filename})");
+	static GameManager() {
+		IEnumerator _log(string message) {
+			Debug.Log(message);
 			yield break;
+		}
+		
+		IEnumerator _watchFile(string filename) {
+			yield return _log($"beg_watchFile({filename})");
+			yield return Sleep(0.1f);
+			yield return _log($"end_watchFile({filename})");
 		}
 
 		IEnumerator _downloadUri(string uri) {
-			Debug.Log($"beg_downloadUri({uri})");
+			yield return _log($"beg_downloadUri({uri})");
 			yield return _watchFile(uri);
-			Debug.Log($"end_downloadUri({uri})");
+			yield return _log($"end_downloadUri({uri})");
 		}
 
 		IEnumerator _parseConfig(Config cfg) {
-			/*if (cfg.ConfigName == null) {
-				cfg.ConfigName = Stopwatch.GetTimestamp().ToString();
-			} else {
-				cfg.ConfigName += $"\n{Stopwatch.GetTimestamp()}";
-			}*/
-			//Debug.Log($"_parseConfig({cfg.ConfigName})");
-			yield break;
+			cfg.Time(Stopwatch.GetTimestamp());
+			yield return _log($"_parseConfig({cfg.Times()})");
 		}
 
 		// MonoBehaviour
-		//Stage<MonoBehaviour>.Hand(_downloadUri("Stage<MonoBehaviour>.Hand(_downloadUri)"));
-
-		int inCounter = 0;
-		int refCounter = 0;
-		int plainCounter = 0;
-
-		float inTimer = 0f;
-		float refTimer = 0f;
-		float plainTimer = 0f;
+		Stage<MonoBehaviour>.Hand((ref MonoBehaviour monoBehaviour) => _downloadUri("Stage<MonoBehaviour>.Hand(_downloadUri)"));
 
 		// Config
-		var end = Stopwatch.GetTimestamp() + 10000000L;
-		while (Stopwatch.GetTimestamp() < end) {
-			++inCounter;
-			Stage<Config>.Hand((in Config cfg) => _parseConfig(cfg));
-		}
-		var realEnd = Stopwatch.GetTimestamp();
-		inTimer += (realEnd - (end - 10000000f)) / 10000000f;
-
-		// power nap
-		Thread.Sleep(10);
-
-		// ref
-		end = Stopwatch.GetTimestamp() + 10000000L;
-		while (Stopwatch.GetTimestamp() < end) {
-			++refCounter;
-			Stage<Config>.Hand((ref Config cfg) => _parseConfig(cfg));
-		}
-		realEnd = Stopwatch.GetTimestamp();
-		refTimer += (realEnd - (end - 10000000f)) / 10000000f;
-
-		// power nap
-		Thread.Sleep(10);
-
-		// plain
-		end = Stopwatch.GetTimestamp() + 10000000L;
-		while (Stopwatch.GetTimestamp() < end) {
-			++plainCounter;
-			Stage<Config>.Hand(_parseConfig);
-		}
-		realEnd = Stopwatch.GetTimestamp();
-		plainTimer += (realEnd - (end - 10000000f)) / 10000000f;
-
-		// power nap
-		Thread.Sleep(10);
-
-		// Stats
-		Debug.LogWarning($"in | {inCounter}x | {inTimer}s");
-		Debug.LogWarning($"ref | {refCounter}x | {refTimer}s");
-		Debug.LogWarning($"plain | {plainCounter}x | {plainTimer}s");
-		Debug.LogWarning($"in-ref:{inCounter - refCounter} in-pl:{inCounter - plainCounter} ref-pl:{refCounter - plainCounter}");
+		var localConfig = new Config();
+		Stage<Config>.Hand(ref localConfig);
+		Stage<Config>.Hand((ref Config config) => _parseConfig(config));
+		Stage<Config>.Hand((ref Config config) => _parseConfig(config));
+		Stage<Config>.Hand((ref Config config) => _parseConfig(config));
 
 		// Main
-		/*Stage<Main>.Hand(_watchFile("Stage<Main>.Hand(_watchFile)"));
-		Stage<Main>.Hand(_downloadUri("Stage<Main>.Hand(_downloadUri)"));*/
+		Stage<Main>.Hand((ref Main main) => _watchFile("Stage<Main>.Hand(_watchFile)"));
+		Stage<Main>.Hand((ref Main main) => _downloadUri("Stage<Main>.Hand(_downloadUri)"));
 
 		// 1. Load Config
 		/*var _config = new Config();
@@ -135,29 +101,4 @@ public class GameManager : MonoBehaviour {
 		}
 		Stagehand<Config>.Stage<Main>(_processConfig(_config));*/
 	}
-
-	/*private static readonly long _firstTime = Stopwatch.GetTimestamp();
-	private static long _lastTime = _firstTime;
-
-	private static void _log(string message) {
-		var thisTime = Stopwatch.GetTimestamp();
-		Debug.Log($"{Thread.CurrentThread.Name} // {thisTime - _firstTime} ({thisTime - _lastTime}):\t{message}");
-		_lastTime = thisTime;
-	}
-
-	private static IEnumerator _log<T>(string message) {
-		_log($"_log: {typeof(T)}: {message}");
-		yield break;
-	}
-
-	private static IEnumerator _nestedLog<T>(string message, string nestedMessage) {
-		_log($"_nestedLog: {typeof(T)}: {message}");
-
-		IEnumerator InnerLog() {
-			_log($"_nestedLog: {typeof(T)}: {message}: {nestedMessage}");
-			yield break;
-		}
-
-		yield return InnerLog();
-	}*/
 }
