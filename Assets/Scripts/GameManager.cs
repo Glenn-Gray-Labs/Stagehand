@@ -1,6 +1,8 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Plugins.Backstage;
 using UnityEngine;
@@ -10,8 +12,8 @@ public class GameManager : MonoBehaviour {
 	public class Config {
 		public readonly Queue<long> times = new Queue<long>();
 
-		public void Time(long time) {
-			times.Enqueue(time);
+		public void Time() {
+			times.Enqueue(Stopwatch.GetTimestamp());
 		}
 
 		public string Times() {
@@ -33,7 +35,7 @@ public class GameManager : MonoBehaviour {
 			Debug.Log(message);
 			yield break;
 		}
-		
+
 		IEnumerator _watchFile(string filename) {
 			yield return _log($"beg_watchFile({filename})");
 			yield return Sleep(0.1f);
@@ -46,25 +48,53 @@ public class GameManager : MonoBehaviour {
 			yield return _log($"end_downloadUri({uri})");
 		}
 
-		IEnumerator _parseConfig(Config cfg) {
-			cfg.Time(Stopwatch.GetTimestamp());
-			yield return _log($"_parseConfig({cfg.Times()})");
+		IEnumerator _readFile(Config config, string filename) {
+			Debug.Log(filename);
+			using (var sr = new StreamReader(filename)) {
+				while (!sr.EndOfStream) {
+					yield return sr.ReadLine();
+				}
+			}
+			yield break;
+		}
+
+		IEnumerator _parseJson(Config config, IEnumerator reader) {
+			Debug.Log(reader.Current);
+			config.Time();
+			yield return reader;
+			Debug.Log(reader.Current);
+			config.Time();
 		}
 
 		// MonoBehaviour
-		Stage<MonoBehaviour>.Hand((ref MonoBehaviour monoBehaviour) => _downloadUri("Stage<MonoBehaviour>.Hand(_downloadUri)"));
+		Stage<MonoBehaviour>.Hand((ref MonoBehaviour monoBehaviour) => null);
 
 		// Config
 		var localConfig = new Config();
 		Stage<Config>.Hand(ref localConfig);
+		Stage<Config>.Hand((ref Config config) => _parseJson(config, _readFile(config, "Assets/Tests/backstage.json")));
+
+		// Config
+		/*IEnumerator _parseConfig(Config cfg) {
+			cfg.Time(Stopwatch.GetTimestamp());
+			yield return _log($"_parseConfig({cfg.Times()})");
+		}
+
+		var localConfig = new Config();
+		Stage<Config>.Hand(ref localConfig);
 		Stage<Config>.Hand(_parseConfig(localConfig));
-		Stage<Config>.Hand((ref Config config) => _parseConfig(config));
-		Stage<Config>.Hand((ref Config config) => _parseConfig(config));
-		Stage<Config>.Hand((ref Config config) => _parseConfig(config));
+		Stage<Config>.Hand((ref Config config) => _parseConfig(config));*/
 
 		// Main
-		Stage<Main>.Hand((ref Main main) => _watchFile("Stage<Main>.Hand(_watchFile)"));
-		Stage<Main>.Hand((ref Main main) => _downloadUri("Stage<Main>.Hand(_downloadUri)"));
+		/*IEnumerator _runMain(Main main, Config config) {
+			Debug.Log($"main:{config.Times()}");
+			yield return Sleep(0.1f);
+			Debug.Log(main.MainName = "MAIN");
+		}
+
+		var localMain = new Main();
+		Stage<Main>.Hand(ref localMain);
+		Stage<Main>.Hand((ref Main main, ref Config config) => _runMain(main, config));*/
 
 		// 1. Load Config
 		/*var _config = new Config();
