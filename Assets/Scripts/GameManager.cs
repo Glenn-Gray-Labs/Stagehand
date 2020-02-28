@@ -57,6 +57,7 @@ public class GameManager : MonoBehaviour {
 		// Config
 		var localConfig = new Config();
 		Stage<Config>.Hand(ref localConfig);
+		Stage<Config>.Hand(_parseConfig(localConfig));
 		Stage<Config>.Hand((ref Config config) => _parseConfig(config));
 		Stage<Config>.Hand((ref Config config) => _parseConfig(config));
 		Stage<Config>.Hand((ref Config config) => _parseConfig(config));

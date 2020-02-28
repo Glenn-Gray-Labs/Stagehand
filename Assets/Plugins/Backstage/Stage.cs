@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
+using JetBrains.Annotations;
 
 namespace Plugins.Backstage {
 	public static class Stage {
@@ -57,6 +58,11 @@ namespace Plugins.Backstage {
 		public delegate IEnumerator ActionWrapper(ref T data);
 		public static void Hand(ActionWrapper action) {
 			Stage._enumerators[_enumeratorIndex].Enqueue(action(ref _value));
+		}
+
+		public delegate IEnumerator CoroutineWrapper(T data);
+		public static void Hand(IEnumerator action) {
+			Stage._enumerators[_enumeratorIndex].Enqueue(action);
 		}
 
 		// Hand a work queue back to the application. Used to execute code on the main thread.
