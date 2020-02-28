@@ -1,80 +1,104 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using Plugins.Stagehand;
+﻿using System;
+using System.Collections;
+using System.Diagnostics;
+using System.Threading;
+using Plugins.Backstage;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 public class GameManager : MonoBehaviour {
-	public struct Config {
+	public class Config {
 		public string ConfigName;
 	}
 
-	private struct Main {
+	public static IEnumerator Sleep(float durationInSeconds) {
+		var endTime = Stopwatch.GetTimestamp() + (long) (10000000L * durationInSeconds);
+		while (Stopwatch.GetTimestamp() < endTime) yield return null;
+	}
+
+	private class Main {
 		public string MainName;
 	}
 
-	/*private class FileWatcher : IEnumerator {
-		public interface IFile {
-			//
-		}
-
-		static FileWatcher() {
-			Stagehand<FileWatcher>.Attach(new FileWatcher());
-		}
-
-		private FileWatcher() {
-			//
-		}
-	}*/
-
-	public class ConfigFile : IEnumerator<Config> {
-		private string _filename;
-
-		public ConfigFile(string filename) {
-			Debug.Log($"ConfigFile({_filename})");
-			_filename = filename;
-		}
-
-		public bool MoveNext() {
-			Debug.Log($"ConfigFile({_filename}).MoveNext()");
-			return false;
-		}
-
-		public void Reset() {
-			throw new System.NotImplementedException();
-		}
-
-		public Config Current { get; }
-
-		object IEnumerator.Current => Current;
-
-		public void Dispose() {
-			throw new System.NotImplementedException();
-		}
-	}
-
-	static GameManager() {
+	GameManager() {
 		IEnumerator _watchFile(string filename) {
-			Debug.Log($"_watchFile({filename})");
-			yield return new WaitForSeconds(0.1f);
-		}
-
-		IEnumerator _downloadUri(string uri) {
-			Debug.Log($"_downloadUri({uri})");
-			yield return new WaitForSeconds(0.2f);
-		}
-
-		IEnumerator _parseConfig(Config config) {
-			Debug.Log($"_parseConfig({config.ConfigName})");
-			config.ConfigName = "Config Read";
+			Debug.Log($"beg_watchFile({filename})");
 			yield break;
 		}
 
-		Hand<Config>.To(new ConfigFile("stagehand.json"));
-		//Hand<ConfigFile>.To(_watchFile);
-		Hand<Config>.To(_downloadUri("http://www.google.com"));
+		IEnumerator _downloadUri(string uri) {
+			Debug.Log($"beg_downloadUri({uri})");
+			yield return _watchFile(uri);
+			Debug.Log($"end_downloadUri({uri})");
+		}
 
-		Hand<MonoBehaviour>.To(_downloadUri("http://www.google.com"));
-		
+		IEnumerator _parseConfig(Config cfg) {
+			/*if (cfg.ConfigName == null) {
+				cfg.ConfigName = Stopwatch.GetTimestamp().ToString();
+			} else {
+				cfg.ConfigName += $"\n{Stopwatch.GetTimestamp()}";
+			}*/
+			//Debug.Log($"_parseConfig({cfg.ConfigName})");
+			yield break;
+		}
+
+		// MonoBehaviour
+		//Stage<MonoBehaviour>.Hand(_downloadUri("Stage<MonoBehaviour>.Hand(_downloadUri)"));
+
+		int inCounter = 0;
+		int refCounter = 0;
+		int plainCounter = 0;
+
+		float inTimer = 0f;
+		float refTimer = 0f;
+		float plainTimer = 0f;
+
+		// Config
+		var end = Stopwatch.GetTimestamp() + 10000000L;
+		while (Stopwatch.GetTimestamp() < end) {
+			++inCounter;
+			Stage<Config>.Hand((in Config cfg) => _parseConfig(cfg));
+		}
+		var realEnd = Stopwatch.GetTimestamp();
+		inTimer += (realEnd - (end - 10000000f)) / 10000000f;
+
+		// power nap
+		Thread.Sleep(10);
+
+		// ref
+		end = Stopwatch.GetTimestamp() + 10000000L;
+		while (Stopwatch.GetTimestamp() < end) {
+			++refCounter;
+			Stage<Config>.Hand((ref Config cfg) => _parseConfig(cfg));
+		}
+		realEnd = Stopwatch.GetTimestamp();
+		refTimer += (realEnd - (end - 10000000f)) / 10000000f;
+
+		// power nap
+		Thread.Sleep(10);
+
+		// plain
+		end = Stopwatch.GetTimestamp() + 10000000L;
+		while (Stopwatch.GetTimestamp() < end) {
+			++plainCounter;
+			Stage<Config>.Hand(_parseConfig);
+		}
+		realEnd = Stopwatch.GetTimestamp();
+		plainTimer += (realEnd - (end - 10000000f)) / 10000000f;
+
+		// power nap
+		Thread.Sleep(10);
+
+		// Stats
+		Debug.LogWarning($"in | {inCounter}x | {inTimer}s");
+		Debug.LogWarning($"ref | {refCounter}x | {refTimer}s");
+		Debug.LogWarning($"plain | {plainCounter}x | {plainTimer}s");
+		Debug.LogWarning($"in-ref:{inCounter - refCounter} in-pl:{inCounter - plainCounter} ref-pl:{refCounter - plainCounter}");
+
+		// Main
+		/*Stage<Main>.Hand(_watchFile("Stage<Main>.Hand(_watchFile)"));
+		Stage<Main>.Hand(_downloadUri("Stage<Main>.Hand(_downloadUri)"));*/
+
 		// 1. Load Config
 		/*var _config = new Config();
 		IEnumerator _readConfig(Config config) {

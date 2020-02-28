@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace Plugins.Stagehand.Vendors.Unity {
+namespace Plugins.Backstage.Vendors.Unity {
 	public class StagehandMonoBehaviour : MonoBehaviour {
 		// Living and Breathing Code
 		//
@@ -13,7 +13,7 @@ namespace Plugins.Stagehand.Vendors.Unity {
 		// come up, and they cannot be ignored.
 #if UNITY_EDITOR
 		private void OnValidate() {
-			StartCoroutine(Hand<MonoBehaviour>.To());
+			StartCoroutine(Stage<MonoBehaviour>.Hand());
 		}
 #else
 		private void OnEnable() {
