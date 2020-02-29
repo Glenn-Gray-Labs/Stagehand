@@ -48,22 +48,47 @@ public class GameManager : MonoBehaviour {
 			yield return _log($"end_downloadUri({uri})");
 		}
 
-		IEnumerator _readFile(Config config, string filename) {
-			Debug.Log(filename);
+		IEnumerator<string> _readFile(string filename) {
 			using (var sr = new StreamReader(filename)) {
 				while (!sr.EndOfStream) {
 					yield return sr.ReadLine();
 				}
 			}
-			yield break;
 		}
 
-		IEnumerator _parseJson(Config config, IEnumerator reader) {
-			Debug.Log(reader.Current);
-			config.Time();
-			yield return reader;
-			Debug.Log(reader.Current);
-			config.Time();
+		IEnumerator<string> _parseJsonObject(IEnumerator<string> reader, int characterIndex) {
+			while (reader.MoveNext()) {
+				for (; characterIndex < reader.Current.Length; ++characterIndex) {
+					switch (reader.Current[characterIndex]) {
+					case '}':
+						yield break;
+					}
+				}
+			}
+		}
+
+		IEnumerator<string> _parseJson(IEnumerator<string> reader) {
+			while (reader.MoveNext()) {
+				foreach (var characterIndex in reader.Current) {
+					switch (reader.Current[characterIndex]) {
+					case '{':
+						var parseObject = _parseJsonObject(reader, characterIndex);
+						while (parseObject.MoveNext()) {
+							Debug.Log(parseObject.Current);
+						}
+						break;
+					}
+				}
+				yield return reader.Current;
+			}
+		}
+
+		IEnumerator<Config> _deserializeInto(Config config, IEnumerator<string> parser) {
+			while (parser.MoveNext()) {
+				Debug.Log(parser.Current);
+				yield return null;
+			}
+			yield return config;
 		}
 
 		// MonoBehaviour
@@ -72,7 +97,7 @@ public class GameManager : MonoBehaviour {
 		// Config
 		var localConfig = new Config();
 		Stage<Config>.Hand(ref localConfig);
-		Stage<Config>.Hand((ref Config config) => _parseJson(config, _readFile(config, "Assets/Tests/backstage.json")));
+		Stage<Config>.Hand((ref Config config) => _deserializeInto(config, _parseJson(_readFile("Assets/Tests/backstage.json"))));
 
 		// Config
 		/*IEnumerator _parseConfig(Config cfg) {

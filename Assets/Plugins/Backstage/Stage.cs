@@ -1,44 +1,82 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
-using JetBrains.Annotations;
 
 namespace Plugins.Backstage {
 	public static class Stage {
 #if UNITY_EDITOR
-		
+		public class BenchmarkConfig {
+			public int Iterations = 1000000;
+		}
+		private static readonly BenchmarkConfig _defaultBenchmarkConfig = new BenchmarkConfig();
+		public static void Benchmark(Action action, BenchmarkConfig benchmarkConfig = null) {
+			if (benchmarkConfig == null) benchmarkConfig = _defaultBenchmarkConfig;
+			var stopwatch = Stopwatch.StartNew();
+			for (var i = 0; i < benchmarkConfig.Iterations; ++i) {
+				action();
+			}
+			stopwatch.Stop();
+			UnityEngine.Debug.Log($"{benchmarkConfig.Iterations}x in {stopwatch.ElapsedMilliseconds / 1000f}s");
+		}
+
+		// Debugging Enhancements Only In-Editor
+		internal class ConsumerQueue : Queue<IEnumerator> {
+			private readonly string _name;
+
+			public ConsumerQueue(string name) {
+				_name = name;
+			}
+
+			public override string ToString() {
+				return _name;
+			}
+		}
+#else
+		// Thin Wrapper for Convenience/Clarity
+		internal class ConsumerQueue : Queue<IEnumerator> {
+			public ConsumerQueue(string name) {
+				//
+			}
+		}
 #endif
 
 		// Kill Switch
 		public static bool Running { get; } = true;
 
 		// Per-Thread Queues
-		public static Queue<IEnumerator>[] _enumerators = new Queue<IEnumerator>[Environment.ProcessorCount];
+		internal static ConsumerQueue[] _queues = new ConsumerQueue[Environment.ProcessorCount];
 
 		// TODO: How should routing work?
-		public static int _enumeratorIndex;
+		internal static int _enumeratorIndex;
 
 		static Stage() {
 			// Main Thread
-			_enumerators[0] = new Queue<IEnumerator>();
+			_queues[0] = new ConsumerQueue("ThreadMain");
 
 			// The Rest...
 			for (var processorIndex = 1; processorIndex < Environment.ProcessorCount; ++processorIndex) {
-				new Thread(_consumer).Start(_enumerators[processorIndex] = new Queue<IEnumerator>());
+				new Thread(_consumer).Start(_queues[processorIndex] = new ConsumerQueue(processorIndex.ToString()));
 			}
 		}
 
 		private static void _consumer(object enumerators) {
-			var actions = (Queue<IEnumerator>) enumerators;
+			var actions = (ConsumerQueue) enumerators;
 			Thread.CurrentThread.Name = actions.ToString();
 			while (Running) {
 				while (actions.Count > 0) {
 					void _recurse(IEnumerator action) {
-						while (action.MoveNext()) {
-							if (action.Current != null && action.Current.GetType() == typeof(IEnumerator)) {
-								_recurse((IEnumerator) action.Current);
+						try {
+							while (action.MoveNext()) {
+								try {
+									_recurse((IEnumerator) action.Current);
+								} catch (Exception) {
+									//
+								}
 							}
+						} catch (Exception) {
+							//
 						}
 					}
 					_recurse(actions.Dequeue());
@@ -73,7 +111,7 @@ namespace Plugins.Backstage {
 		// TODO: Investigate methods for benchmarking ref, in, and standard copy/move semantics in runtime.
 		public delegate IEnumerator ActionWrapper(ref T value);
 		public static void Hand(ActionWrapper action) {
-			Stage._enumerators[_enumeratorIndex].Enqueue(action(ref _value));
+			Stage._queues[_enumeratorIndex].Enqueue(action(ref _value));
 		}
 
 		public delegate IEnumerator ActionWrapper<T2>(ref T value1, ref T2 value2);
@@ -87,17 +125,12 @@ namespace Plugins.Backstage {
 			// TODO: Explore global actions which execute in-between a mask of types.
 
 			// TODO: Explore the many data distribution options.
-			Stage._enumerators[_enumeratorIndex].Enqueue(action(ref _value, ref Stage<T2>._value));
-		}
-
-		public delegate IEnumerator CoroutineWrapper(T data);
-		public static void Hand(IEnumerator action) {
-			Stage._enumerators[_enumeratorIndex].Enqueue(action);
+			Stage._queues[_enumeratorIndex].Enqueue(action(ref _value, ref Stage<T2>._value));
 		}
 
 		// Hand a work queue back to the application. Used to execute code on the main thread.
 		public static IEnumerator Hand() {
-			var queue = Stage._enumerators[_enumeratorIndex];
+			var queue = Stage._queues[_enumeratorIndex];
 			while (queue.Count > 0) {
 				yield return queue.Dequeue();
 			}
