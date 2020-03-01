@@ -68,12 +68,14 @@ namespace Plugins.Backstage {
 						while (action.MoveNext()) {
 							try {
 								_recurse((IEnumerator) action.Current);
-							} catch (Exception) {
-								//
+							} catch (Exception e) {
+								// TODO: Verbose mode only.
+								UnityEngine.Debug.LogException(e);
 							}
 						}
-					} catch (Exception) {
-						//
+					} catch (Exception e) {
+						// TODO: Verbose mode only.
+						UnityEngine.Debug.LogException(e);
 					}
 				}
 				_recurse(actions.Dequeue());
