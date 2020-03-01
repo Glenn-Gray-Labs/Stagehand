@@ -9,7 +9,7 @@
 			"batters": {
 				"batter": [
 					{
-						"id": 1001,
+						"id": -1001,
 						"type": "Regular"
 					},
 					{
