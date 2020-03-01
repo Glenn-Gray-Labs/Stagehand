@@ -22,10 +22,10 @@ namespace Plugins.Backstage {
 		}
 
 		// Debugging Enhancements Only In-Editor
-		internal class ConsumerQueue : Queue<IEnumerator> {
+		internal class EnumeratorQueue : Queue<IEnumerator> {
 			private readonly string _name;
 
-			public ConsumerQueue(string name) {
+			public EnumeratorQueue(string name) {
 				_name = name;
 			}
 
@@ -35,8 +35,8 @@ namespace Plugins.Backstage {
 		}
 #else
 		// Thin Wrapper for Convenience/Clarity
-		internal class ConsumerQueue : Queue<IEnumerator> {
-			public ConsumerQueue(string name) {
+		internal class EnumeratorQueue : Queue<IEnumerator> {
+			public EnumeratorQueue(string name) {
 				//
 			}
 		}
@@ -46,41 +46,45 @@ namespace Plugins.Backstage {
 		public static bool Running { get; } = true;
 
 		// Per-Thread Queues
-		internal static ConsumerQueue[] _queues = new ConsumerQueue[Environment.ProcessorCount];
+		internal static EnumeratorQueue[] _queues = new EnumeratorQueue[Environment.ProcessorCount];
 
 		// TODO: How should routing work?
 		internal static int _enumeratorIndex;
 
 		static Stage() {
 			// Main Thread
-			_queues[0] = new ConsumerQueue("ThreadMain");
+			_queues[0] = new EnumeratorQueue("ThreadMain");
 
 			// The Rest...
 			for (var processorIndex = 1; processorIndex < Environment.ProcessorCount; ++processorIndex) {
-				new Thread(_consumer).Start(_queues[processorIndex] = new ConsumerQueue(processorIndex.ToString()));
+				new Thread(_consumer).Start(_queues[processorIndex] = new EnumeratorQueue(processorIndex.ToString()));
 			}
 		}
 
+		internal static void _consume(EnumeratorQueue actions) {
+			while (actions.Count > 0) {
+				void _recurse(IEnumerator action) {
+					try {
+						while (action.MoveNext()) {
+							try {
+								_recurse((IEnumerator) action.Current);
+							} catch (Exception) {
+								//
+							}
+						}
+					} catch (Exception) {
+						//
+					}
+				}
+				_recurse(actions.Dequeue());
+			}
+		}
+		
 		private static void _consumer(object enumerators) {
-			var actions = (ConsumerQueue) enumerators;
+			var actions = (EnumeratorQueue) enumerators;
 			Thread.CurrentThread.Name = actions.ToString();
 			while (Running) {
-				while (actions.Count > 0) {
-					void _recurse(IEnumerator action) {
-						try {
-							while (action.MoveNext()) {
-								try {
-									_recurse((IEnumerator) action.Current);
-								} catch (Exception) {
-									//
-								}
-							}
-						} catch (Exception) {
-							//
-						}
-					}
-					_recurse(actions.Dequeue());
-				}
+				_consume(actions);
 
 				// TODO: Delete this when the router is complete.
 				Thread.Sleep(2);
@@ -129,11 +133,8 @@ namespace Plugins.Backstage {
 		}
 
 		// Hand a work queue back to the application. Used to execute code on the main thread.
-		public static IEnumerator Hand() {
-			var queue = Stage._queues[_enumeratorIndex];
-			while (queue.Count > 0) {
-				yield return queue.Dequeue();
-			}
+		public static void Hand() {
+			Stage._consume(Stage._queues[_enumeratorIndex]);
 		}
 		
 #if UNITY_EDITOR

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Plugins.Backstage;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -56,34 +58,214 @@ public class GameManager : MonoBehaviour {
 			}
 		}
 
-		IEnumerator<string> _parseJsonObject(IEnumerator<string> reader, int characterIndex) {
-			while (reader.MoveNext()) {
+		int _skipJsonWhitespace(IEnumerator<string> reader, int characterIndex) {
+			do {
 				for (; characterIndex < reader.Current.Length; ++characterIndex) {
 					switch (reader.Current[characterIndex]) {
+						case ' ':
+						case '\t':
+						case '\n':
+						case '\r':
+							break;
+						default:
+							return characterIndex;
+					}
+				}
+				characterIndex = 0;
+			} while (reader.MoveNext());
+			return -1;
+		}
+
+		IEnumerator<object> _parseJsonArray(IEnumerator<string> reader, int characterIndex) {
+			do {
+				for (; characterIndex < reader.Current.Length; ++characterIndex) {
+					characterIndex = _skipJsonWhitespace(reader, characterIndex);
+					yield return _parseJsonValue(reader, ref characterIndex);
+					
+					switch (reader.Current[characterIndex]) {
+						case ',':
+							break;
+						case ']':
+							yield break;
+					}
+				}
+				characterIndex = 0;
+			} while (reader.MoveNext());
+		}
+
+		object _parseJsonNumber(IEnumerator<string> reader, ref int characterIndex) {
+			var negative = reader.Current[characterIndex] == '-' ? -1 : 1;
+			if (negative == -1) ++characterIndex;
+
+			(long, long) _internalParseJsonNumber(ref int charIdx) {
+				long value = 0;
+				long multiplier = 1;
+				for (; charIdx < reader.Current.Length; ++charIdx) {
+					switch (reader.Current[charIdx]) {
+						case '0':
+							break;
+						case '1':
+							value += multiplier;
+							break;
+						case '2':
+							value += 2 * multiplier;
+							break;
+						case '3':
+							value += 3 * multiplier;
+							break;
+						case '4':
+							value += 4 * multiplier;
+							break;
+						case '5':
+							value += 5 * multiplier;
+							break;
+						case '6':
+							value += 6 * multiplier;
+							break;
+						case '7':
+							value += 7 * multiplier;
+							break;
+						case '8':
+							value += 8 * multiplier;
+							break;
+						case '9':
+							value += 9 * multiplier;
+							break;
+						case '.':
+							// TODO: Parse float.
+							// _internalParseJsonNumber();
+							
+							break;
+						case 'e':
+						case 'E':
+							// TODO: Exponent!
+							break;
+						default:
+							return (multiplier, negative * value);
+					}
+					multiplier *= 10;
+				}
+				return (multiplier, negative * value);
+			}
+			(var m, var v) = _internalParseJsonNumber(ref characterIndex);
+			return v;
+		}
+
+		string _parseJsonString(IEnumerator<string> reader, ref int characterIndex) {
+			var stringBuilder = new StringBuilder();
+			do {
+				++characterIndex;
+				for (; characterIndex < reader.Current.Length; ++characterIndex) {
+					switch (reader.Current[characterIndex]) {
+						case '"':
+							++characterIndex;
+							return stringBuilder.ToString();
+						case '\\':
+							stringBuilder.Append(reader.Current[++characterIndex]);
+							break;
+						default:
+							stringBuilder.Append(reader.Current[characterIndex]);
+							break;
+					}
+				}
+				characterIndex = 0;
+			} while (reader.MoveNext());
+			return null;
+		}
+
+		object _parseJsonValue(IEnumerator<string> reader, ref int characterIndex) {
+			do {
+				for (; characterIndex < reader.Current.Length; ++characterIndex) {
+					characterIndex = _skipJsonWhitespace(reader, characterIndex);
+
+					switch (reader.Current[characterIndex]) {
+					case '"':
+						return _parseJsonString(reader, ref characterIndex);
+					case '-':
+					case '0':
+					case '1':
+					case '2':
+					case '3':
+					case '4':
+					case '5':
+					case '6':
+					case '7':
+					case '8':
+					case '9': // TODO: I really dislike the redundancy of double checking, here and inside _parseJsonNumber.
+						return _parseJsonNumber(reader, ref characterIndex);
+					case '{':
+						return _parseJsonObject(reader, characterIndex);
+					case '[':
+						return _parseJsonArray(reader, characterIndex);
+					case 't': // TODO: true
+						break;
+					case 'f': // TODO: false
+						break;
+					case 'n': // TODO: null
+						break;
+					}
+				}
+				characterIndex = 0;
+			} while (reader.MoveNext());
+			return null;
+		}
+
+		IEnumerator<object> _parseJsonObject(IEnumerator<string> reader, int characterIndex) {
+			do {
+				for (; characterIndex < reader.Current.Length; ++characterIndex) {
+					characterIndex = _skipJsonWhitespace(reader, characterIndex);
+
+					switch (reader.Current[characterIndex]) {
+					case '"':
+						yield return _parseJsonString(reader, ref characterIndex);
+						characterIndex = _skipJsonWhitespace(reader, characterIndex);
+						if (reader.Current[characterIndex] != ':') throw new SyntaxErrorException("Invalid character encountered while looking for a colon.");
+						++characterIndex;
+						yield return _parseJsonValue(reader, ref characterIndex);
+						break;
 					case '}':
 						yield break;
 					}
 				}
-			}
+				characterIndex = 0;
+			} while (reader.MoveNext());
 		}
 
-		IEnumerator<string> _parseJson(IEnumerator<string> reader) {
+		IEnumerator<object> _parseJson(IEnumerator<string> reader) {
 			while (reader.MoveNext()) {
-				foreach (var characterIndex in reader.Current) {
+				for (var characterIndex = 0; characterIndex < reader.Current.Length; ++characterIndex) {
+					characterIndex = _skipJsonWhitespace(reader, characterIndex);
+
+					// If you find yourself,
+					// Reading this code,
+					// It's probably because,
+					// You've not linted your JSON.
 					switch (reader.Current[characterIndex]) {
 					case '{':
 						var parseObject = _parseJsonObject(reader, characterIndex);
 						while (parseObject.MoveNext()) {
-							Debug.Log(parseObject.Current);
+							var key = (string) parseObject.Current;
+							Debug.Log(key);
+							parseObject.MoveNext();
+							var value = parseObject.Current;
+							Debug.Log(value);
 						}
 						break;
+					case '[':
+						var parseArray = _parseJsonArray(reader, characterIndex);
+						while (parseArray.MoveNext()) {
+							Debug.Log(parseArray.Current);
+						}
+						break;
+					default:
+						throw new SyntaxErrorException($"Invalid opening character encountered in JSON stream: {reader.Current[characterIndex]}");
 					}
 				}
 				yield return reader.Current;
 			}
 		}
 
-		IEnumerator<Config> _deserializeInto(Config config, IEnumerator<string> parser) {
+		IEnumerator<Config> _deserializeInto(Config config, IEnumerator<object> parser) {
 			while (parser.MoveNext()) {
 				Debug.Log(parser.Current);
 				yield return null;

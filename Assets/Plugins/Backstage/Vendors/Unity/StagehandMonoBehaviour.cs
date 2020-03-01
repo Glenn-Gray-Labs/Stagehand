@@ -13,11 +13,11 @@ namespace Plugins.Backstage.Vendors.Unity {
 		// come up, and they cannot be ignored.
 #if UNITY_EDITOR
 		private void OnValidate() {
-			StartCoroutine(Stage<MonoBehaviour>.Hand());
+			Stage<MonoBehaviour>.Hand();
 		}
 #else
 		private void OnEnable() {
-			StartCoroutine(Hand<MonoBehaviour>.To());
+			Stage<MonoBehaviour>.Hand();
 		}
 #endif
 	}
