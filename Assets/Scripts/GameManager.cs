@@ -96,8 +96,7 @@ public class GameManager : MonoBehaviour {
 		object _parseJsonNumber(IEnumerator<string> reader, ref int characterIndex) {
 			var negative = reader.Current[characterIndex] == '-' ? -1 : 1;
 			if (negative == -1) ++characterIndex;
-
-			(long, long) _internalParseJsonNumber(ref int charIdx) {
+			(long, long, double) _internalParseJsonNumber(ref int charIdx) {
 				long value = 0;
 				long multiplier = 1;
 				for (; charIdx < reader.Current.Length; ++charIdx) {
@@ -132,23 +131,24 @@ public class GameManager : MonoBehaviour {
 							value += 9 * multiplier;
 							break;
 						case '.':
-							// TODO: Parse float.
-							// _internalParseJsonNumber();
-							
-							break;
+							++charIdx;
+							(var m2, var v2, double d2) = _internalParseJsonNumber(ref charIdx);
+							double dValue = value;
+							dValue += v2 / (double) m2;
+							return (0, 0, dValue);
 						case 'e':
 						case 'E':
 							// TODO: Exponent!
 							break;
 						default:
-							return (multiplier, negative * value);
+							return (multiplier, negative * value, 0.0);
 					}
 					multiplier *= 10;
 				}
-				return (multiplier, negative * value);
+				return (multiplier, negative * value, 0.0);
 			}
-			(var m, var v) = _internalParseJsonNumber(ref characterIndex);
-			return v;
+			(var m, var v, double d) = _internalParseJsonNumber(ref characterIndex);
+			return m == 0 ? v : d;
 		}
 
 		string _parseJsonString(IEnumerator<string> reader, ref int characterIndex) {
