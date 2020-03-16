@@ -68,6 +68,9 @@ namespace Plugins.Backstage {
 						while (action.MoveNext()) {
 							try {
 								_recurse((IEnumerator) action.Current);
+							} catch (InvalidCastException e) {
+								// TODO: VERY Verbose mode only.
+								//UnityEngine.Debug.LogException(e);
 							} catch (Exception e) {
 								// TODO: Verbose mode only.
 								UnityEngine.Debug.LogException(e);
@@ -81,7 +84,7 @@ namespace Plugins.Backstage {
 				_recurse(actions.Dequeue());
 			}
 		}
-		
+
 		private static void _consumer(object enumerators) {
 			var actions = (EnumeratorQueue) enumerators;
 			Thread.CurrentThread.Name = actions.ToString();
