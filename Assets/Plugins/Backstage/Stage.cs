@@ -69,16 +69,19 @@ namespace Plugins.Backstage {
 							try {
 								_recurse((IEnumerator) action.Current);
 							} catch (InvalidCastException e) {
-								// TODO: VERY Verbose mode only.
-								//UnityEngine.Debug.LogException(e);
-							} catch (Exception e) {
-								// TODO: Verbose mode only.
+#if STAGEHAND_VERY_VERBOSE
 								UnityEngine.Debug.LogException(e);
+#endif
+							} catch (Exception e) {
+#if STAGEHAND_VERBOSE
+								UnityEngine.Debug.LogException(e);
+#endif
 							}
 						}
 					} catch (Exception e) {
-						// TODO: Verbose mode only.
+#if STAGEHAND_VERBOSE
 						UnityEngine.Debug.LogException(e);
+#endif
 					}
 				}
 				_recurse(actions.Dequeue());

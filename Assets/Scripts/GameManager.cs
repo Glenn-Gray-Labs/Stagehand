@@ -400,8 +400,8 @@ PARSE_EXPONENT:
 		// Config
 		var localConfig = new Config();
 		Stage<Config>.Hand(ref localConfig);
-		//Stage<Config>.Hand((ref Config config) => _deserializeInto(config, _parseJson(_readFile("Assets/Tests/backstage.json"))));
-		Stage<Main>.Hand((ref Main main) => _deserializeInto(main, _parseJson(_readFile("Assets/Tests/backstage.json"))));
+		//Stage<Config>.Hand((ref Config config) => _deserializeInto(config, _parseJson(_readFile("Assets/Tests/JSON/backstage.json"))));
+		Stage<Main>.Hand((ref Main main) =>  _parseJson(_readFile("Assets/Tests/JSON/backstage.json")));
 
 		// Config
 		/*IEnumerator _parseConfig(Config cfg) {
