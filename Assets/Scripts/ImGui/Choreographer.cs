@@ -1,13 +1,20 @@
-﻿using UnityEngine;
+﻿using System.Runtime.InteropServices;
+using UnityEngine;
 using ImGuiNET;
 
-public class DearImGuiDemo : MonoBehaviour {
+public class Choreographer : MonoBehaviour {
+    [DllImport("cimgui")] private static extern void choreographer_load();
+    [DllImport("cimgui")] private static extern void choreographer_update();
+    [DllImport("cimgui")] private static extern void choreographer_unload();
+
     private void OnEnable() {
+        choreographer_load();
         ImGuiUn.Layout += OnLayout;
     }
 
     private void OnDisable() {
         ImGuiUn.Layout -= OnLayout;
+        choreographer_unload();
     }
 
     private float _float = 1f;
@@ -23,5 +30,8 @@ public class DearImGuiDemo : MonoBehaviour {
         if (_windows[1]) ImGui.ShowAboutWindow();
         if (ImGui.Button("Metrics")) _windows[2] = !_windows[2];
         if (_windows[2]) ImGui.ShowMetricsWindow();
+
+        // Choreographer's UI
+        choreographer_update();
     }
 }
