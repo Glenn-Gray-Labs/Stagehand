@@ -3,9 +3,9 @@ using UnityEngine;
 using ImGuiNET;
 
 public class Choreographer : MonoBehaviour {
-    [DllImport("cimgui")] private static extern void choreographer_load();
-    [DllImport("cimgui")] private static extern void choreographer_update();
-    [DllImport("cimgui")] private static extern void choreographer_unload();
+    [DllImport("Choreographer")] private static extern void choreographer_load();
+    [DllImport("Choreographer")] private static extern void choreographer_update();
+    [DllImport("Choreographer")] private static extern void choreographer_unload();
 
     private void OnEnable() {
         choreographer_load();
