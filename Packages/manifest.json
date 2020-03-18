@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "com.realgames.dear-imgui": "https://github.com/realgamessoftware/dear-imgui-unity.git",
+    "com.realgames.dear-imgui": "ssh://git@github.com/calebgray/dear-imgui-unity.git",
     "com.unity.ide.rider": "1.2.1",
     "com.unity.timeline": "1.3.0-preview.3",
     "com.unity.ugui": "1.0.0",
@@ -39,7 +39,7 @@
   "lock": {
     "com.realgames.dear-imgui": {
       "revision": "HEAD",
-      "hash": "8a24fd1dcab057a98f2c26fb54754b3d27701859"
+      "hash": "424bf86147ba7b5bb6b93f6f6124c8c9600315bd"
     }
   }
 }

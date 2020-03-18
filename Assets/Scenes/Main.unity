@@ -215,7 +215,8 @@ MonoBehaviour:
     ResizeFromEdges: 1
     MoveFromTitleOnly: 0
     MemoryCompactTimer: 60
-  _fontAtlasConfiguration: {fileID: 0}
+  _fontAtlasConfiguration: {fileID: 11400000, guid: c28d530c65c90376d88107a476a4ea32,
+    type: 2}
   _iniSettings: {fileID: 0}
   _shaders: {fileID: 11400000, guid: 9c25b437bdcfe95449d0617c2f2ee93d, type: 2}
   _style: {fileID: 11400000, guid: 2f5e7cc338c3ffc4caddb08baa576db2, type: 2}
