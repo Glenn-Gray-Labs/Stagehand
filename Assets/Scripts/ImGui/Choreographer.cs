@@ -199,6 +199,8 @@ public class Choreographer : MonoBehaviour {
         public override float ScrollbarRounding => 3f;
         public override float GrabRounding => 2f;
         public override Vector2 WindowTitleAlign => new Vector2(0f, 0.3333333f);
+
+        public override Vector4 TitleBg => _defaultStyle.TitleBgActive;
     }
     private static readonly AltStyle _altStyle = new AltStyle();
 
