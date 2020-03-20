@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Plugins.Backstage;
+using Plugins.Stagehand;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -397,11 +396,15 @@ PARSE_EXPONENT:
 		// MonoBehaviour
 		Stage<MonoBehaviour>.Hand((ref MonoBehaviour monoBehaviour) => null);
 
-		// Config
+		// Roots
 		var localConfig = new Config();
 		Stage<Config>.Hand(ref localConfig);
-		//Stage<Config>.Hand((ref Config config) => _deserializeInto(config, _parseJson(_readFile("Assets/Tests/JSON/backstage.json"))));
-		Stage<Main>.Hand((ref Main main) =>  _parseJson(_readFile("Assets/Tests/JSON/backstage.json")));
+		Stage<Config>.Hand((ref Config config) => _deserializeInto(config, _parseJson(_readFile("Assets/Tests/JSON/backstage.json"))));
+
+		// Relationships
+		Stage<Config>.Hand((ref Config config, ref Main main) =>  null);
+		Stage<Main>.Hand((ref Main main, ref MonoBehaviour monoBehaviour) =>  null);
+		Stage<MonoBehaviour>.Hand((ref MonoBehaviour monoBehaviour, ref Config config) =>  null);
 
 		// Config
 		/*IEnumerator _parseConfig(Config cfg) {
