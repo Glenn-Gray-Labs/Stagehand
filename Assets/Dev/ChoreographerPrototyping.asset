@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1893448595, guid: a040fb66244a7f54289914d98ea4ef7d, type: 3}
+  m_Name: ChoreographerPrototyping
+  m_EditorClassIdentifier: 
+  _data:
+    _json: '{"graph":{"variables":{"collection":{"$content":[],"$version":"A"},"$version":"A"},"controlInputDefinitions":[],"controlOutputDefinitions":[],"valueInputDefinitions":[],"valueOutputDefinitions":[],"title":"Choreographer
+      Prototyping","summary":"Prototyping Sandbox","pan":{"x":-285.7109,"y":114.5563},"zoom":1.0,"elements":[{"chainable":false,"member":{"name":"ShowDemoWindow","parameterTypes":[],"targetType":"ImGuiNET.ImGui","targetTypeName":"ImGuiNET.ImGui","$version":"A"},"defaultValues":{},"position":{"x":-257.0,"y":67.0},"guid":"ee63e8c9-37a9-4d01-b0dd-87989a3c5ce3","$version":"A","$type":"Bolt.InvokeMember","$id":"9"},{"argumentCount":1,"coroutine":false,"defaultValues":{"target":null,"name":{"$content":"OnLayout","$type":"System.String"}},"position":{"x":-481.0,"y":63.0},"guid":"e680a238-6413-429b-8721-7da4c74f2010","$version":"A","$type":"Bolt.CustomEvent","$id":"12"},{"sourceUnit":{"$ref":"12"},"sourceKey":"trigger","destinationUnit":{"$ref":"9"},"destinationKey":"enter","guid":"1d209b2f-38f8-4d14-b13e-a5f4274f7e92","$type":"Bolt.ControlConnection"}],"$version":"A"}}'
+    _objectReferences: []
