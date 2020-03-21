@@ -13,28 +13,28 @@ MonoBehaviour:
   m_Name: ChoreographerStyle
   m_EditorClassIdentifier: 
   Alpha: 1
-  WindowPadding: {x: 8, y: 8}
-  WindowRounding: 7
+  WindowPadding: {x: 4, y: 4}
+  WindowRounding: 6
   WindowBorderSize: 1
   WindowMinSize: {x: 32, y: 32}
-  WindowTitleAlign: {x: 0, y: 0.5}
+  WindowTitleAlign: {x: 0, y: 0.33333334}
   WindowMenuButtonPosition: 0
   ChildRounding: 0
   ChildBorderSize: 1
   PopupRounding: 0
   PopupBorderSize: 1
-  FramePadding: {x: 4, y: 3}
+  FramePadding: {x: 4, y: 6}
   FrameRounding: 0
   FrameBorderSize: 0
-  ItemSpacing: {x: 8, y: 4}
-  ItemInnerSpacing: {x: 4, y: 4}
+  ItemSpacing: {x: 0, y: 6}
+  ItemInnerSpacing: {x: 6, y: 0}
   TouchExtraPadding: {x: 0, y: 0}
-  IndentSpacing: 21
+  IndentSpacing: 8
   ColumnsMinSpacing: 6
-  ScrollbarSize: 14
-  ScrollbarRounding: 9
+  ScrollbarSize: 20
+  ScrollbarRounding: 3
   GrabMinSize: 10
-  GrabRounding: 0
+  GrabRounding: 2
   TabRounding: 4
   TabBorderSize: 0
   ColorButtonPosition: 1
@@ -58,7 +58,7 @@ MonoBehaviour:
   - {r: 0.16, g: 0.29, b: 0.48, a: 0.54}
   - {r: 0.26, g: 0.59, b: 0.98, a: 0.4}
   - {r: 0.26, g: 0.59, b: 0.98, a: 0.67}
-  - {r: 0.04, g: 0.04, b: 0.04, a: 1}
+  - {r: 0.16078432, g: 0.2901961, b: 0.47843137, a: 1}
   - {r: 0.16, g: 0.29, b: 0.48, a: 1}
   - {r: 0, g: 0, b: 0, a: 0.51}
   - {r: 0.14, g: 0.14, b: 0.14, a: 1}

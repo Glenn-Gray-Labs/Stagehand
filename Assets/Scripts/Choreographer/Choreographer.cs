@@ -37,14 +37,20 @@ namespace Stagehand {
             // Auto-Layout Feature
             public readonly int Row;
             public readonly int Column;
+            
+            // Debugging
+            public readonly Type ParentType;
 
-            public Node(Type type, NodeIO[] inputs, NodeIO[] outputs, int row, int column) {
+            public Node(Type type, NodeIO[] inputs, NodeIO[] outputs, int row, int column, Type parentType) {
                 Id = (++_nextId).ToString();
                 Type = type;
                 Inputs = inputs;
                 Outputs = outputs;
+
                 Row = row;
                 Column = column;
+
+                ParentType = parentType;
             }
         }
 
@@ -213,7 +219,7 @@ namespace Stagehand {
         private static readonly CompactStyle _compactStyle = new CompactStyle();
 
         private Dictionary<Type, IStyle> _styles = new Dictionary<Type, IStyle> {
-            { typeof(Type), new CompactStyle() },
+            { typeof(Type), _compactStyle },
         };
 
         public static readonly uint ColorWhite = ImGui.ColorConvertFloat4ToU32(Vector4.one);
@@ -296,28 +302,6 @@ namespace Stagehand {
 
         private void OnEnable() {
             ImGuiUn.Layout += OnLayout;
-
-            // Set Defaults
-            var imGuiStyle = ImGui.GetStyle();
-            imGuiStyle.WindowPadding = _compactStyle.WindowPadding;
-            imGuiStyle.FramePadding = _compactStyle.FramePadding;
-            imGuiStyle.ItemSpacing = _compactStyle.ItemSpacing;
-            imGuiStyle.ItemInnerSpacing = _compactStyle.ItemInnerSpacing;
-            imGuiStyle.IndentSpacing = _compactStyle.IndentSpacing;
-            imGuiStyle.ScrollbarSize = _compactStyle.ScrollbarSize;
-            imGuiStyle.GrabMinSize = _compactStyle.GrabMinSize;
-            imGuiStyle.WindowBorderSize = _compactStyle.WindowBorderSize;
-            imGuiStyle.ChildBorderSize = _compactStyle.ChildBorderSize;
-            imGuiStyle.PopupBorderSize = _compactStyle.PopupBorderSize;
-            imGuiStyle.FrameBorderSize = _compactStyle.FrameBorderSize;
-            imGuiStyle.WindowRounding = _compactStyle.WindowRounding;
-            imGuiStyle.ChildRounding = _compactStyle.ChildRounding;
-            imGuiStyle.FrameRounding = _compactStyle.FrameRounding;
-            imGuiStyle.PopupRounding = _compactStyle.PopupRounding;
-            imGuiStyle.ScrollbarRounding = _compactStyle.ScrollbarRounding;
-            imGuiStyle.GrabRounding = _compactStyle.GrabRounding;
-            imGuiStyle.TabRounding = _compactStyle.TabRounding;
-            imGuiStyle.WindowTitleAlign = _compactStyle.WindowTitleAlign;
         }
 
         private void OnDisable() {
@@ -329,7 +313,7 @@ namespace Stagehand {
 
             var counter = 0;
             foreach (var node in Nodes) {
-                var nodeName = $"{node.Type.Name}-{node.Row}-{node.Column}";
+                var nodeName = node.ParentType == null ? node.Type.Name :  $"{node.ParentType.Name}->{node.Type.Name}";
 
                 IStyle currentStyle;
                 if (_styles.ContainsKey(node.Type)) {
@@ -370,7 +354,7 @@ namespace Stagehand {
                 windowSize.x += imGuiStyle.WindowPadding.x + imGuiStyle.ItemSpacing.x / 2f;
                 windowSize.y += imGuiStyle.WindowPadding.y + imGuiStyle.FramePadding.y * 2f + (imGuiStyle.ItemInnerSpacing.y + imGuiStyle.ItemSpacing.y) * rowCount;
 
-                ImGui.SetNextWindowPos(new Vector2(20.0f + node.Column * 300f, 20.0f + node.Row * 300f));
+                ImGui.SetNextWindowPos(new Vector2(20.0f + node.Column * 200f, 20.0f + node.Row * 100f));
 
                 ImGui.SetNextWindowSize(windowSize);
                 ImGui.PushID(node.Id);

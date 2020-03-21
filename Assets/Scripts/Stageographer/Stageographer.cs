@@ -19,21 +19,23 @@ namespace Stagehand {
 					inputs.Add(new Choreographer.NodeIO(field.FieldType));
 					outputs.Add(new Choreographer.NodeIO(field.FieldType));
 				}
-				nodes.Add(new Choreographer.Node(type, inputs.ToArray(), outputs.ToArray(), row, 0));
+				nodes.Add(new Choreographer.Node(type, inputs.ToArray(), outputs.ToArray(), row, 0, null));
 
 				var parents = new HashSet<Type>();
-				void _addChildren(Type parentType, int currentRow, int currentColumn) {
+				void _addChildren(Type parentType, int column) {
 					if (parents.Contains(parentType)) return;
 					parents.Add(parentType);
 
 					if (!Stage.Relationships.TryGetValue(parentType, out var children)) return;
 
 					foreach (var childType in children) {
-						nodes.Add(new Choreographer.Node(childType, Choreographer.NodeIO.Empty, Choreographer.NodeIO.Empty, currentRow++, currentColumn));
-						_addChildren(childType, currentRow, currentColumn + 1);
+						nodes.Add(new Choreographer.Node(childType, Choreographer.NodeIO.Empty, Choreographer.NodeIO.Empty, row, column, parentType));
+						_addChildren(childType, column + 1);
+						++row;
 					}
 				}
-				_addChildren(type, row++, 1);
+				_addChildren(type, 1);
+				++row;
 			}
 			Choreographer.Nodes = nodes.ToArray();
 		}
