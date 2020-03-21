@@ -10,9 +10,10 @@ namespace Stagehand {
 		private void Awake() {
 			if (!EditorApplication.isPlaying) return;
 
-			var nodes = new List<Choreographer.Node>();
+			var graph = new List<Choreographer.Node>();
 			var parents = new HashSet<Type>();
-			int _addChildren(IEnumerable<Type> types, int row = 0, int column = 0) {
+			(int, Choreographer.Node) _addChildren(IEnumerable<Type> types, Choreographer.Node parent = null, int row = 0, int column = 0) {
+				List<Choreographer.Node> nodes = new List<Choreographer.Node>();
 				foreach (var type in types) {
 					// Parent
 					var inputs = new List<Choreographer.NodeIO>();
@@ -25,26 +26,33 @@ namespace Stagehand {
 						inputs.Add(new Choreographer.NodeIO(field.FieldType));
 						outputs.Add(new Choreographer.NodeIO(field.FieldType));
 					}
-					nodes.Add(new Choreographer.Node(type, inputs.ToArray(), outputs.ToArray(), row, column));
+					var node = new Choreographer.Node(type, inputs.ToArray(), outputs.ToArray(), row, column);
+					graph.Add(node);
+					nodes.Add(node);
 
 					// Infinite Recursion
 					if (parents.Contains(type)) {
-						// TODO: Mark the node with an infinite loop indicator, pointing to the original source of recursion.
-						return row + 1;
+						//node.Connections.Add(new Choreographer.Connection(parent));
+						return (row + 1, node);
 					}
 
 					// Leaf
-					if (!Stage.Relationships.TryGetValue(type, out var children)) return row + 1;
+					if (!Stage.Relationships.TryGetValue(type, out var children)) return (row + 1, node);
 
 					// Children
 					parents.Add(type);
-					row = _addChildren(children, row, column + 1);
+					Choreographer.Node childNode;
+					(row, childNode) = _addChildren(children, node, row, column + 1);
 					parents.Remove(type);
+
+					// Relationship
+					if (childNode == null) continue;
+					childNode.Connections.Add(new Choreographer.Connection(node));
 				}
-				return row;
+				return (row, null);
 			}
 			_addChildren(Stage.Children);
-			Choreographer.Nodes = nodes.ToArray();
+			Choreographer.Nodes = graph.ToArray();
 		}
 	}
 }

@@ -26,10 +26,20 @@ namespace Stagehand {
         [Serializable] public class NodeIO {
             public readonly string Id;
             public readonly Type Type;
+            public readonly List<NodeIO> Connections = new List<NodeIO>();
 
             public NodeIO(Type type) {
                 Id = (++_nextId).ToString();
                 Type = type;
+            }
+        }
+
+        // Node Connections
+        [Serializable] public class Connection {
+            public Node Parent;
+
+            public Connection(Node parent) {
+                Parent = parent;
             }
         }
 
@@ -40,6 +50,7 @@ namespace Stagehand {
             public readonly Type Type;
             public readonly NodeIO[] Inputs;
             public readonly NodeIO[] Outputs;
+            public readonly List<Connection> Connections = new List<Connection>();
 
             // GUI Data
             public string Title;
@@ -74,6 +85,7 @@ namespace Stagehand {
 
         // TODO: How should we pass nodes into Choreographer?
         public static Node[] Nodes = {};
+        private static Dictionary<Node, Node> _nodes = new Dictionary<Node, Node>();
 
         public interface IStyle {
             void Push();
@@ -184,6 +196,7 @@ namespace Stagehand {
                     node.Column == 0 ? (_columnSizes[node.Column].CumulativeSize - node.Size.x) / 2f : Padding * node.Column + _columnSizes[node.Column - 1].CumulativeSize + (_columnSizes[node.Column].CumulativeSize - _columnSizes[node.Column - 1].CumulativeSize - node.Size.x) / 2f, 
                     node.Row == 0 ? (_rowSizes[node.Row].CumulativeSize - node.Size.y) / 2f : Padding * node.Row + _rowSizes[node.Row - 1].CumulativeSize + (_rowSizes[node.Row].CumulativeSize - _rowSizes[node.Row - 1].CumulativeSize - node.Size.y) / 2f
                 );
+                _nodes.Add(node, node);
             }
         }
 
@@ -235,6 +248,14 @@ namespace Stagehand {
                 }
                 ImGui.End();
                 node.Style.Pop();
+
+                foreach (var connection in node.Connections) {
+                    var parentNode = _nodes[connection.Parent];
+                    var start = new Vector2(parentNode.Pos.x + parentNode.Size.x, parentNode.Pos.y);
+                    var end = new Vector2(node.Pos.x, node.Pos.y);
+                    var mid = Vector2.Lerp(start, end, 0.5f);
+                    bgDrawList.AddBezierCurve(start, mid, mid, end, ColorWhite, 2f);
+                }
             }
         }
     }
