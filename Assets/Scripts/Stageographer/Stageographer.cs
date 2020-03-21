@@ -17,14 +17,14 @@ namespace Stagehand {
 					// Parent
 					var inputs = new List<Choreographer.NodeIO>();
 					var outputs = new List<Choreographer.NodeIO>();
-					/*foreach (var field in type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public)) {
+					foreach (var field in type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public)) {
 						inputs.Add(new Choreographer.NodeIO(field.DeclaringType));
 						outputs.Add(new Choreographer.NodeIO(field.DeclaringType));
 					}
 					foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public)) {
 						inputs.Add(new Choreographer.NodeIO(field.FieldType));
 						outputs.Add(new Choreographer.NodeIO(field.FieldType));
-					}*/
+					}
 					nodes.Add(new Choreographer.Node(type, inputs.ToArray(), outputs.ToArray(), row, column));
 
 					// Infinite Recursion
