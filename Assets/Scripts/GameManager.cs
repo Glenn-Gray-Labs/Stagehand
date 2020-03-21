@@ -407,6 +407,11 @@ PARSE_EXPONENT:
 		Stage<Config>.Hand((ref Config config, ref IEnumerator enumerator) =>  null);
 		Stage<Main>.Hand((ref Main main) =>  null);
 		Stage<Main>.Hand((ref Main main, ref IEnumerator enumerator) =>  null);
+		Stage<GameManager>.Hand((ref GameManager gameManager) =>  null);
+		Stage<GameManager>.Hand((ref GameManager gameManager, ref Config config) =>  null);
+		Stage<GameManager>.Hand((ref GameManager gameManager, ref Main main) =>  null);
+		Stage<IEnumerator>.Hand((ref IEnumerator enumeratorA, ref IEnumerator enumeratorB) =>  null);
+		Stage<IEnumerator>.Hand((ref IEnumerator enumerator, ref Config config) =>  null);
 
 		// Config
 		/*IEnumerator _parseConfig(Config cfg) {

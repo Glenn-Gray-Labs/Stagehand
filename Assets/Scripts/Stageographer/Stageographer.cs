@@ -11,32 +11,39 @@ namespace Stagehand {
 			if (!EditorApplication.isPlaying) return;
 
 			var nodes = new List<Choreographer.Node>();
-			var row = 0;
-			foreach (var type in Stage.Children) {
-				var inputs = new List<Choreographer.NodeIO>();
-				var outputs = new List<Choreographer.NodeIO>();
-				foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public)) {
-					inputs.Add(new Choreographer.NodeIO(field.FieldType));
-					outputs.Add(new Choreographer.NodeIO(field.FieldType));
-				}
-				nodes.Add(new Choreographer.Node(type, inputs.ToArray(), outputs.ToArray(), row, 0, null));
-
-				var parents = new HashSet<Type>();
-				void _addChildren(Type parentType, int column) {
-					if (parents.Contains(parentType)) return;
-					parents.Add(parentType);
-
-					if (!Stage.Relationships.TryGetValue(parentType, out var children)) return;
-
-					foreach (var childType in children) {
-						nodes.Add(new Choreographer.Node(childType, Choreographer.NodeIO.Empty, Choreographer.NodeIO.Empty, row, column, parentType));
-						_addChildren(childType, column + 1);
-						++row;
+			var parents = new HashSet<Type>();
+			int _addChildren(IEnumerable<Type> types, int row = 0, int column = 0) {
+				foreach (var type in types) {
+					// Parent
+					var inputs = new List<Choreographer.NodeIO>();
+					var outputs = new List<Choreographer.NodeIO>();
+					/*foreach (var field in type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public)) {
+						inputs.Add(new Choreographer.NodeIO(field.DeclaringType));
+						outputs.Add(new Choreographer.NodeIO(field.DeclaringType));
 					}
+					foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public)) {
+						inputs.Add(new Choreographer.NodeIO(field.FieldType));
+						outputs.Add(new Choreographer.NodeIO(field.FieldType));
+					}*/
+					nodes.Add(new Choreographer.Node(type, inputs.ToArray(), outputs.ToArray(), row, column));
+
+					// Infinite Recursion
+					if (parents.Contains(type)) {
+						// TODO: Mark the node with an infinite loop indicator, pointing to the original source of recursion.
+						return row + 1;
+					}
+
+					// Leaf
+					if (!Stage.Relationships.TryGetValue(type, out var children)) return row + 1;
+
+					// Children
+					parents.Add(type);
+					row = _addChildren(children, row, column + 1);
+					parents.Remove(type);
 				}
-				_addChildren(type, 1);
-				++row;
+				return row;
 			}
+			_addChildren(Stage.Children);
 			Choreographer.Nodes = nodes.ToArray();
 		}
 	}

@@ -2,18 +2,27 @@
 using System.Collections.Generic;
 using Bolt;
 using ImGuiNET;
-using Plugins.Stagehand;
 using UnityEngine;
 
 namespace Stagehand {
     public class Choreographer : MonoBehaviour {
-        public interface IFlow { }
-        public interface IFlowIn : IFlow { }
-        public interface IFlowOut : IFlow { }
-
+        // Unique ID Generator
         private static int _nextId;
+
+        // Read/Write Feature
         public const bool ReadOnly = true;
 
+        // Auto-Layout Feature
+        private class NodeSize {
+            public float CumulativeSize;
+            public float OriginalSize;
+
+            public static readonly NodeSize Empty = new NodeSize();
+        }
+        private readonly List<NodeSize> rowSizes = new List<NodeSize>(new[] { new NodeSize() });
+        private readonly List<NodeSize> columnSizes = new List<NodeSize>(new[] { new NodeSize() });
+
+        // Node Inputs/Outputs
         [Serializable] public class NodeIO {
             public readonly string Id;
             public readonly Type Type;
@@ -26,31 +35,45 @@ namespace Stagehand {
             }
         }
 
+        // Node Feature
         [Serializable] public class Node {
+            // Low Level Data
             public readonly string Id;
             public readonly Type Type;
             public readonly NodeIO[] Inputs;
             public readonly NodeIO[] Outputs;
 
-            public static readonly Node[] Empty = {};
+            // GUI Data
+            public string Title;
+            public readonly string Name;
+            public IStyle Style;
+            public Vector2 LeftSize;
+            public Vector2 RightSize;
+            public readonly float[] RowHeights;
 
             // Auto-Layout Feature
             public readonly int Row;
             public readonly int Column;
-            
-            // Debugging
-            public readonly Type ParentType;
+            public Vector2 Size;
+            public Vector2 Pos;
 
-            public Node(Type type, NodeIO[] inputs, NodeIO[] outputs, int row, int column, Type parentType) {
+            // Convenience
+            public static readonly Node[] Empty = {};
+
+            public Node(Type type, NodeIO[] inputs, NodeIO[] outputs, int row, int column, Type parentType = null) {
                 Id = (++_nextId).ToString();
                 Type = type;
                 Inputs = inputs;
                 Outputs = outputs;
 
+                Title = parentType == null ? Type.Name : $"{parentType.Name}->{Type.Name}";
+                Name = $"{Title}##{Id}";
+
+                var rowCount = Inputs.Length > Outputs.Length ? Inputs.Length : Outputs.Length;
+                RowHeights = new float[rowCount];
+
                 Row = row;
                 Column = column;
-
-                ParentType = parentType;
             }
         }
 
@@ -223,8 +246,13 @@ namespace Stagehand {
         };
 
         public static readonly uint ColorWhite = ImGui.ColorConvertFloat4ToU32(Vector4.one);
+        public static readonly uint ColorGridLineHorizontal = ImGui.ColorConvertFloat4ToU32(new Vector4(0.3333333f, 0.3333333f, 0.3333333f, 1f));
+        public static readonly uint ColorGridLineVertical = ColorGridLineHorizontal;
 
-        private void _pushStyle(IStyle style) {
+        public const float Padding = 40f;
+
+        private static void _pushStyle(IStyle style) {
+            // TODO: Turn all of this into a loop inside IStyle.
             ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, style.WindowPadding);
             ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, style.FramePadding);
             ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, style.ItemSpacing);
@@ -295,12 +323,13 @@ namespace Stagehand {
             ImGui.PushStyleColor(ImGuiCol.ModalWindowDimBg, style.ModalWindowDimBg);
         }
 
-        private void _popStyle() {
+        private static void _popStyle() {
             ImGui.PopStyleColor(48);
             ImGui.PopStyleVar(19);
         }
 
         private void OnEnable() {
+            ImGuiUn.Layout += OnFirstLayout;
             ImGuiUn.Layout += OnLayout;
         }
 
@@ -308,67 +337,91 @@ namespace Stagehand {
             ImGuiUn.Layout -= OnLayout;
         }
 
-        private void OnLayout() {
+        private void OnFirstLayout() {
+            ImGuiUn.Layout -= OnFirstLayout;
+
             var imGuiStyle = ImGui.GetStyle();
-
-            var counter = 0;
             foreach (var node in Nodes) {
-                var nodeName = node.ParentType == null ? node.Type.Name :  $"{node.ParentType.Name}->{node.Type.Name}";
+                node.Style = _styles.ContainsKey(node.Type) ? _styles[node.Type] : _defaultStyle;
 
-                IStyle currentStyle;
-                if (_styles.ContainsKey(node.Type)) {
-                    currentStyle = _styles[node.Type];
-                    _pushStyle(currentStyle);
-                } else {
-                    currentStyle = _defaultStyle;
-                }
-
-                var titleSize = ImGui.CalcTextSize(nodeName);
-
-                const int columnCount = 2;
-                var rowCount = node.Inputs.Length > node.Outputs.Length ? node.Inputs.Length : node.Outputs.Length;
-
-                var rowHeights = new float[rowCount];
-
-                var leftSize = Vector2.zero;
                 for (var i = 0; i < node.Inputs.Length; ++i) {
                     var inputSize = ImGui.CalcTextSize($"{node.Inputs[i].Type.Name}");
-                    leftSize.x = Mathf.Max(leftSize.x, inputSize.x);
-                    leftSize.y += inputSize.y;
-                    rowHeights[i] = inputSize.y;
+                    node.LeftSize.x = Mathf.Max(node.LeftSize.x, inputSize.x);
+                    node.LeftSize.y += inputSize.y;
+                    node.RowHeights[i] = inputSize.y;
                 }
-                leftSize.x += imGuiStyle.WindowPadding.x + imGuiStyle.ItemSpacing.x * 2f + imGuiStyle.ItemInnerSpacing.x;
+                node.LeftSize.x += imGuiStyle.WindowPadding.x + imGuiStyle.ItemSpacing.x * 2f + imGuiStyle.ItemInnerSpacing.x;
 
-                var rightSize = Vector2.zero;
                 for (var i = 0; i < node.Outputs.Length; ++i) {
                     var outputSize = ImGui.CalcTextSize($"{node.Outputs[i].Type.Name}");
-                    rightSize.x = Mathf.Max(rightSize.x, outputSize.x);
-                    rightSize.y += outputSize.y;
-                    if (outputSize.y > rowHeights[i]) rowHeights[i] = outputSize.y;
+                    node.RightSize.x = Mathf.Max(node.RightSize.x, outputSize.x);
+                    node.RightSize.y += outputSize.y;
+                    if (outputSize.y > node.RowHeights[i]) node.RowHeights[i] = outputSize.y;
                 }
-                rightSize.x += imGuiStyle.WindowPadding.x + imGuiStyle.ItemSpacing.x + imGuiStyle.ItemInnerSpacing.x;
+                node.RightSize.x += imGuiStyle.WindowPadding.x + imGuiStyle.ItemSpacing.x + imGuiStyle.ItemInnerSpacing.x;
 
-                if (leftSize.x + rightSize.x > titleSize.x) titleSize.x = leftSize.x + rightSize.x;
+                var titleSize = ImGui.CalcTextSize(node.Title);
+                if (node.LeftSize.x + node.RightSize.x > titleSize.x) titleSize.x = node.LeftSize.x + node.RightSize.x;
 
-                var windowSize = new Vector2(titleSize.x, titleSize.y + Mathf.Max(leftSize.y, rightSize.y));
-                windowSize.x += imGuiStyle.WindowPadding.x + imGuiStyle.ItemSpacing.x / 2f;
-                windowSize.y += imGuiStyle.WindowPadding.y + imGuiStyle.FramePadding.y * 2f + (imGuiStyle.ItemInnerSpacing.y + imGuiStyle.ItemSpacing.y) * rowCount;
+                node.Size = new Vector2(
+                titleSize.x + imGuiStyle.WindowPadding.x + imGuiStyle.ItemSpacing.x / 2f, 
+                titleSize.y + imGuiStyle.WindowPadding.y + imGuiStyle.FramePadding.y * 2f + (imGuiStyle.ItemInnerSpacing.y + imGuiStyle.ItemSpacing.y) * node.RowHeights.Length + Mathf.Max(node.LeftSize.y, node.RightSize.y)
+                );
 
-                ImGui.SetNextWindowPos(new Vector2(20.0f + node.Column * 200f, 20.0f + node.Row * 100f));
+                void _resize(int current, IList<NodeSize> sizes, float size) {
+                    if (current >= sizes.Count) {
+                        var prevNodeSize = sizes[sizes.Count - 1];
+                        for (var i = sizes.Count; i < current + 1; ++i) {
+                            sizes.Add(new NodeSize {
+                                CumulativeSize = prevNodeSize.CumulativeSize,
+                                OriginalSize = 0,
+                            });
+                        }
+                    }
 
-                ImGui.SetNextWindowSize(windowSize);
+                    if (sizes[current].OriginalSize >= size) return;
+                    var delta = size - sizes[current].OriginalSize;
+                    for (var i = current; i < sizes.Count; ++i) {
+                        sizes[i].CumulativeSize += delta;
+                        sizes[i].OriginalSize = size;
+                    }
+                }
+                _resize(node.Column, columnSizes, node.Size.x);
+                _resize(node.Row, rowSizes, node.Size.y);
+            }
+
+            // Final pass now that all sizes are known.
+            foreach (var node in Nodes) {
+                node.Pos = new Vector2(node.Column == 0 ? 0f : Padding * node.Column + columnSizes[node.Column - 1].CumulativeSize, node.Row == 0 ? 0f : Padding * node.Row + rowSizes[node.Row - 1].CumulativeSize);
+            }
+        }
+
+        private void OnLayout() {
+            var fgDrawList = ImGui.GetBackgroundDrawList();
+            for (var i = 0; i < 10; ++i) {
+                fgDrawList.AddLine(new Vector2(0f, i*100f), new Vector2(2000f,i*100f), ColorGridLineHorizontal, 1f);
+                fgDrawList.AddLine(new Vector2(i*100f, 0f), new Vector2(i*100f, 2000f), ColorGridLineVertical, 1f);
+            }
+
+            var imGuiStyle = ImGui.GetStyle();
+            foreach (var node in Nodes) {
+                // TODO: node.Style.Push();
+                if (node.Style != _defaultStyle) _pushStyle(node.Style);
+
+                ImGui.SetNextWindowSize(node.Size);
+                ImGui.SetNextWindowPos(node.Pos);
                 ImGui.PushID(node.Id);
-                if (ImGui.Begin($"{nodeName}##{node.Id}", ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse)) {
+                if (ImGui.Begin(node.Name, ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse)) {
                     var drawList = ImGui.IsWindowFocused() | ImGui.IsWindowHovered() ? ImGui.GetForegroundDrawList() : ImGui.GetBackgroundDrawList();
                     CustomEvent.Trigger(gameObject, "OnNode", drawList, node);
-                    ImGui.Columns(columnCount, "Column", false);
-                    ImGui.SetColumnWidth(0, leftSize.x);
-                    ImGui.SetColumnOffset(1, leftSize.x);
-                    ImGui.SetColumnWidth(1, rightSize.x);
-                    for (var i = 0; i < rowCount; ++i) {
+                    ImGui.Columns(2, "Column", false);
+                    ImGui.SetColumnWidth(0, node.LeftSize.x);
+                    ImGui.SetColumnOffset(1, node.LeftSize.x);
+                    ImGui.SetColumnWidth(1, node.RightSize.x);
+                    for (var i = 0; i < node.RowHeights.Length; ++i) {
                         if (i < node.Inputs.Length) {
                             ImGui.PushID(node.Inputs[i].Id);
-                            if (ImGui.Selectable($"{node.Inputs[i].Type.Name}", false, ReadOnly ? ImGuiSelectableFlags.Disabled : ImGuiSelectableFlags.None, new Vector2(leftSize.x, rowHeights[i]))) {
+                            if (ImGui.Selectable($"{node.Inputs[i].Type.Name}", false, ReadOnly ? ImGuiSelectableFlags.Disabled : ImGuiSelectableFlags.None, new Vector2(node.LeftSize.x, node.RowHeights[i]))) {
                                 CustomEvent.Trigger(gameObject, "OnInput", drawList, node.Inputs[i].Id);
                             }
                             CustomEvent.Trigger(gameObject, "OnConnection", drawList, new Vector2(ImGui.GetItemRectMin().x, (ImGui.GetItemRectMin().y + ImGui.GetItemRectMax().y) / 2f), -1, node.Inputs[i].Id, ReadOnly);
@@ -379,7 +432,7 @@ namespace Stagehand {
                             ImGui.PushID(node.Inputs[i].Id);
                             ImGui.PushStyleVar(ImGuiStyleVar.SelectableTextAlign, new Vector2(1.0f, 0f));
                             ImGui.Unindent(imGuiStyle.ItemSpacing.x);
-                            if (ImGui.Selectable($"{node.Outputs[i].Type.Name}", false, ReadOnly ? ImGuiSelectableFlags.Disabled : ImGuiSelectableFlags.None, new Vector2(rightSize.x, rowHeights[i]))) {
+                            if (ImGui.Selectable($"{node.Outputs[i].Type.Name}", false, ReadOnly ? ImGuiSelectableFlags.Disabled : ImGuiSelectableFlags.None, new Vector2(node.RightSize.x, node.RowHeights[i]))) {
                                 CustomEvent.Trigger(gameObject, "OnOutput", drawList, node.Outputs[i].Id);
                             }
                             CustomEvent.Trigger(gameObject, "OnConnection", drawList, new Vector2(ImGui.GetItemRectMax().x, (ImGui.GetItemRectMin().y + ImGui.GetItemRectMax().y) / 2f), 1, node.Outputs[i].Id, ReadOnly);
@@ -394,7 +447,8 @@ namespace Stagehand {
                 ImGui.End();
                 ImGui.PopID();
 
-                if (currentStyle != _defaultStyle) _popStyle();
+                // TODO: node.Style.Pop();
+                if (node.Style != _defaultStyle) _popStyle();
             }
         }
     }
