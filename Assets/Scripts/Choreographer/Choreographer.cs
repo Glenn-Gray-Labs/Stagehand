@@ -18,6 +18,8 @@ namespace Stagehand {
             public readonly string Id;
             public readonly Type Type;
 
+            public static readonly NodeIO[] Empty = {};
+
             public NodeIO(Type type) {
                 Id = (++_nextId).ToString();
                 Type = type;
@@ -30,16 +32,24 @@ namespace Stagehand {
             public readonly NodeIO[] Inputs;
             public readonly NodeIO[] Outputs;
 
-            public Node(Type type, NodeIO[] inputs, NodeIO[] outputs) {
+            public static readonly Node[] Empty = {};
+
+            // Auto-Layout Feature
+            public readonly int Row;
+            public readonly int Column;
+
+            public Node(Type type, NodeIO[] inputs, NodeIO[] outputs, int row, int column) {
                 Id = (++_nextId).ToString();
                 Type = type;
                 Inputs = inputs;
                 Outputs = outputs;
+                Row = row;
+                Column = column;
             }
         }
 
         // TODO: How should we pass nodes into Choreographer?
-        public static Node[] Nodes = {};
+        public static Node[] Nodes = Node.Empty;
 
         public interface IStyle {
             Vector2 WindowPadding { get; }
@@ -319,6 +329,8 @@ namespace Stagehand {
 
             var counter = 0;
             foreach (var node in Nodes) {
+                var nodeName = $"{node.Type.Name}-{node.Row}-{node.Column}";
+
                 IStyle currentStyle;
                 if (_styles.ContainsKey(node.Type)) {
                     currentStyle = _styles[node.Type];
@@ -327,7 +339,7 @@ namespace Stagehand {
                     currentStyle = _defaultStyle;
                 }
 
-                var titleSize = ImGui.CalcTextSize(node.Type.Name);
+                var titleSize = ImGui.CalcTextSize(nodeName);
 
                 const int columnCount = 2;
                 var rowCount = node.Inputs.Length > node.Outputs.Length ? node.Inputs.Length : node.Outputs.Length;
@@ -358,9 +370,11 @@ namespace Stagehand {
                 windowSize.x += imGuiStyle.WindowPadding.x + imGuiStyle.ItemSpacing.x / 2f;
                 windowSize.y += imGuiStyle.WindowPadding.y + imGuiStyle.FramePadding.y * 2f + (imGuiStyle.ItemInnerSpacing.y + imGuiStyle.ItemSpacing.y) * rowCount;
 
+                ImGui.SetNextWindowPos(new Vector2(20.0f + node.Column * 300f, 20.0f + node.Row * 300f));
+
                 ImGui.SetNextWindowSize(windowSize);
                 ImGui.PushID(node.Id);
-                if (ImGui.Begin(node.Type.Name, ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse)) {
+                if (ImGui.Begin($"{nodeName}##{node.Id}", ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse)) {
                     var drawList = ImGui.IsWindowFocused() | ImGui.IsWindowHovered() ? ImGui.GetForegroundDrawList() : ImGui.GetBackgroundDrawList();
                     CustomEvent.Trigger(gameObject, "OnNode", drawList, node);
                     ImGui.Columns(columnCount, "Column", false);

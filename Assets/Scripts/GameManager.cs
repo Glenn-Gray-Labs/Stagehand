@@ -394,17 +394,19 @@ PARSE_EXPONENT:
 		}
 
 		// MonoBehaviour
-		Stage<MonoBehaviour>.Hand((ref MonoBehaviour monoBehaviour) => null);
+		//Stage<MonoBehaviour>.Hand((ref MonoBehaviour monoBehaviour) => null);
 
 		// Roots
-		var localConfig = new Config();
+		/*var localConfig = new Config();
 		Stage<Config>.Hand(ref localConfig);
-		Stage<Config>.Hand((ref Config config) => _deserializeInto(config, _parseJson(_readFile("Assets/Tests/JSON/backstage.json"))));
+		Stage<Config>.Hand((ref Config config) => _deserializeInto(config, _parseJson(_readFile("Assets/Tests/JSON/backstage.json"))));*/
 
 		// Relationships
+		Stage<Config>.Hand((ref Config config) =>  null);
 		Stage<Config>.Hand((ref Config config, ref Main main) =>  null);
-		Stage<Main>.Hand((ref Main main, ref MonoBehaviour monoBehaviour) =>  null);
-		Stage<MonoBehaviour>.Hand((ref MonoBehaviour monoBehaviour, ref Config config) =>  null);
+		Stage<Config>.Hand((ref Config config, ref IEnumerator enumerator) =>  null);
+		Stage<Main>.Hand((ref Main main) =>  null);
+		Stage<Main>.Hand((ref Main main, ref IEnumerator enumerator) =>  null);
 
 		// Config
 		/*IEnumerator _parseConfig(Config cfg) {
