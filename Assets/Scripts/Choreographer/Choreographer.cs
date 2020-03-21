@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using Bolt;
 using ImGuiNET;
@@ -27,8 +26,6 @@ namespace Stagehand {
         [Serializable] public class NodeIO {
             public readonly string Id;
             public readonly Type Type;
-
-            public static readonly NodeIO[] Empty = {};
 
             public NodeIO(Type type) {
                 Id = (++_nextId).ToString();
@@ -58,9 +55,6 @@ namespace Stagehand {
             public Vector2 Size;
             public Vector2 Pos;
 
-            // Convenience
-            public static readonly Node[] Empty = {};
-
             public Node(Type type, NodeIO[] inputs, NodeIO[] outputs, int row, int column, Type parentType = null) {
                 Id = (++_nextId).ToString();
                 Type = type;
@@ -79,7 +73,7 @@ namespace Stagehand {
         }
 
         // TODO: How should we pass nodes into Choreographer?
-        public static Node[] Nodes = Node.Empty;
+        public static Node[] Nodes = {};
 
         public interface IStyle {
             void Push();
@@ -185,11 +179,10 @@ namespace Stagehand {
                 _adjustCumulativeSize(node.Row, _rowSizes, node.Size.y);
             }
 
-            for (var i = 1; i < Nodes.Length; ++i) {
-                var node = Nodes[i];
+            foreach (var node in Nodes) {
                 node.Pos = new Vector2(
-                node.Column == 0 ? 0f : Padding * node.Column + _columnSizes[node.Column - 1].CumulativeSize, 
-                node.Row == 0 ? 0f : Padding * node.Row + _rowSizes[node.Row - 1].CumulativeSize
+                    node.Column == 0 ? (_columnSizes[node.Column].CumulativeSize - node.Size.x) / 2f : Padding * node.Column + _columnSizes[node.Column - 1].CumulativeSize + (_columnSizes[node.Column].CumulativeSize - _columnSizes[node.Column - 1].CumulativeSize - node.Size.x) / 2f, 
+                    node.Row == 0 ? (_rowSizes[node.Row].CumulativeSize - node.Size.y) / 2f : Padding * node.Row + _rowSizes[node.Row - 1].CumulativeSize + (_rowSizes[node.Row].CumulativeSize - _rowSizes[node.Row - 1].CumulativeSize - node.Size.y) / 2f
                 );
             }
         }
@@ -198,8 +191,8 @@ namespace Stagehand {
             var bgDrawList = ImGui.GetBackgroundDrawList();
             bgDrawList.AddRectFilled(Vector2.zero, new Vector2(2000f, 2000f), ColorBackground);
             for (var i = 1; i < 19; ++i) {
-                bgDrawList.AddLine(new Vector2(0f, i*100f), new Vector2(2000f,i*100f), ColorGridLineHorizontal, 1f);
-                bgDrawList.AddLine(new Vector2(i*100f, 0f), new Vector2(i*100f, 2000f), ColorGridLineVertical, 1f);
+                bgDrawList.AddLine(new Vector2(0f, i * 100f), new Vector2(2000f,i*100f), ColorGridLineHorizontal, 1f);
+                bgDrawList.AddLine(new Vector2(i * 100f, 0f), new Vector2(i*100f, 2000f), ColorGridLineVertical, 1f);
             }
 
             var imGuiStyle = ImGui.GetStyle();
@@ -207,7 +200,7 @@ namespace Stagehand {
                 ImGui.SetNextWindowSize(node.Size);
                 ImGui.SetNextWindowPos(node.Pos);
                 node.Style.Push();
-                if (ImGui.Begin(node.Name, ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse)) {
+                if (ImGui.Begin(node.Name, ReadOnly ? ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings : ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse)) {
                     var drawList = ImGui.IsWindowFocused() | ImGui.IsWindowHovered() ? ImGui.GetForegroundDrawList() : ImGui.GetBackgroundDrawList();
                     CustomEvent.Trigger(gameObject, "OnNode", drawList, node);
                     ImGui.Columns(2, "Column", false);

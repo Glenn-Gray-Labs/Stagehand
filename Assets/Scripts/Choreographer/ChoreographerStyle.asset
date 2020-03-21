@@ -26,8 +26,8 @@ MonoBehaviour:
   FramePadding: {x: 4, y: 6}
   FrameRounding: 0
   FrameBorderSize: 0
-  ItemSpacing: {x: 0, y: 6}
-  ItemInnerSpacing: {x: 6, y: 0}
+  ItemSpacing: {x: 4, y: 6}
+  ItemInnerSpacing: {x: 8, y: 0}
   TouchExtraPadding: {x: 0, y: 0}
   IndentSpacing: 8
   ColumnsMinSpacing: 6
