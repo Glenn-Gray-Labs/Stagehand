@@ -1,4 +1,4 @@
-﻿using Plugins.Stagehand;
+﻿using Stagehand;
 using UnityEngine;
 
 namespace Plugins.Backstage.Vendors.Unity {

@@ -13,7 +13,7 @@ namespace Stagehand {
         public const bool ReadOnly = true;
 
         // Auto-Layout Feature
-        public const float Padding = 40f;
+        public const float Padding = 80f;
 
         private class NodeSize {
             public float CumulativeSize;
@@ -26,19 +26,42 @@ namespace Stagehand {
         [Serializable] public class NodeIO {
             public readonly string Id;
             public readonly Type Type;
+            public readonly string Name;
             public readonly List<NodeIO> Connections = new List<NodeIO>();
 
-            public NodeIO(Type type) {
+            private static string _friendlyTypeName(Type type) {
+                // System.Collections.Generic.Queue`1[System.Int64] => Queue
+                // System.String => String
+                var argName = type.ToString();
+                var tildeOrLength = argName.IndexOf('`');
+                if (tildeOrLength == -1) tildeOrLength = argName.Length;
+                var startIndex = argName.LastIndexOf('.', tildeOrLength - 1) + 1;
+                return argName.Substring(startIndex, tildeOrLength - startIndex);
+            }
+
+            private static string _friendlyTypeName(Type type, string name) {
+                return $"{name} ({_friendlyTypeName(type)})";
+            }
+
+            public NodeIO(Type type, string name) {
                 Id = (++_nextId).ToString();
                 Type = type;
+                Name = _friendlyTypeName(type, name);
             }
         }
 
         // Node Connections
         [Serializable] public class Connection {
+            public ConnectionType Type;
             public Node Parent;
 
-            public Connection(Node parent) {
+            public enum ConnectionType {
+                Inherited,
+                Recursive,
+            }
+
+            public Connection(ConnectionType type, Node parent) {
+                Type = type;
                 Parent = parent;
             }
         }
@@ -124,7 +147,7 @@ namespace Stagehand {
 
         public static readonly uint ColorWhite = ImGui.ColorConvertFloat4ToU32(Vector4.one);
         public static readonly uint ColorBackground = ImGui.ColorConvertFloat4ToU32(new Vector4(0f, 0f, 0f, 1f));
-        public static readonly uint ColorGridLineHorizontal = ImGui.ColorConvertFloat4ToU32(new Vector4(0.3333333f, 0.3333333f, 0.3333333f, 1f));
+        public static readonly uint ColorGridLineHorizontal = ImGui.ColorConvertFloat4ToU32(new Vector4(0.1f, 0.1f, 0.1f, 1f));
         public static readonly uint ColorGridLineVertical = ColorGridLineHorizontal;
 
         private void OnEnable() {
@@ -146,7 +169,7 @@ namespace Stagehand {
                 node.Style = _styles.ContainsKey(node.Type) ? _styles[node.Type] : _defaultStyle;
 
                 for (var i = 0; i < node.Inputs.Length; ++i) {
-                    var inputSize = ImGui.CalcTextSize($"{node.Inputs[i].Type.Name}");
+                    var inputSize = ImGui.CalcTextSize(node.Inputs[i].Name);
                     node.LeftSize.x = Mathf.Max(node.LeftSize.x, inputSize.x);
                     node.LeftSize.y += inputSize.y;
                     node.RowHeights[i] = inputSize.y;
@@ -154,7 +177,7 @@ namespace Stagehand {
                 node.LeftSize.x += imGuiStyle.WindowPadding.x + imGuiStyle.ItemSpacing.x * 2f + imGuiStyle.ItemInnerSpacing.x;
 
                 for (var i = 0; i < node.Outputs.Length; ++i) {
-                    var outputSize = ImGui.CalcTextSize($"{node.Outputs[i].Type.Name}");
+                    var outputSize = ImGui.CalcTextSize(node.Outputs[i].Name);
                     node.RightSize.x = Mathf.Max(node.RightSize.x, outputSize.x);
                     node.RightSize.y += outputSize.y;
                     if (outputSize.y > node.RowHeights[i]) node.RowHeights[i] = outputSize.y;
@@ -200,6 +223,11 @@ namespace Stagehand {
             }
         }
 
+        private static void DrawCurvedLine(ImDrawListPtr drawList, Vector2 start, Vector2 end, Vector2 curveStrength, uint color, float thickness) {
+            var direction = (end - start).normalized;
+            drawList.AddBezierCurve(start, start + direction * curveStrength, end - direction * curveStrength, end, color, thickness);
+        }
+
         private void OnLayout() {
             var bgDrawList = ImGui.GetBackgroundDrawList();
             bgDrawList.AddRectFilled(Vector2.zero, new Vector2(2000f, 2000f), ColorBackground);
@@ -223,7 +251,7 @@ namespace Stagehand {
                     for (var i = 0; i < node.RowHeights.Length; ++i) {
                         if (i < node.Inputs.Length) {
                             ImGui.PushID(node.Inputs[i].Id);
-                            if (ImGui.Selectable(node.Inputs[i].Type.Name, false, ReadOnly ? ImGuiSelectableFlags.Disabled : ImGuiSelectableFlags.None, new Vector2(node.LeftSize.x, node.RowHeights[i]))) {
+                            if (ImGui.Selectable(node.Inputs[i].Name, false, ReadOnly ? ImGuiSelectableFlags.Disabled : ImGuiSelectableFlags.None, new Vector2(node.LeftSize.x, node.RowHeights[i]))) {
                                 CustomEvent.Trigger(gameObject, "OnInput", drawList, node.Inputs[i].Id);
                             }
                             CustomEvent.Trigger(gameObject, "OnConnection", drawList, new Vector2(ImGui.GetItemRectMin().x, (ImGui.GetItemRectMin().y + ImGui.GetItemRectMax().y) / 2f), -1, node.Inputs[i].Id, ReadOnly);
@@ -231,10 +259,10 @@ namespace Stagehand {
                         }
                         ImGui.NextColumn();
                         if (i < node.Outputs.Length) {
-                            ImGui.PushID(node.Inputs[i].Id);
+                            ImGui.PushID(node.Outputs[i].Id);
                             ImGui.PushStyleVar(ImGuiStyleVar.SelectableTextAlign, new Vector2(1.0f, 0f));
                             ImGui.Unindent(imGuiStyle.ItemSpacing.x);
-                            if (ImGui.Selectable(node.Outputs[i].Type.Name, false, ReadOnly ? ImGuiSelectableFlags.Disabled : ImGuiSelectableFlags.None, new Vector2(node.RightSize.x, node.RowHeights[i]))) {
+                            if (ImGui.Selectable(node.Outputs[i].Name, false, ReadOnly ? ImGuiSelectableFlags.Disabled : ImGuiSelectableFlags.None, new Vector2(node.RightSize.x, node.RowHeights[i]))) {
                                 CustomEvent.Trigger(gameObject, "OnOutput", drawList, node.Outputs[i].Id);
                             }
                             CustomEvent.Trigger(gameObject, "OnConnection", drawList, new Vector2(ImGui.GetItemRectMax().x, (ImGui.GetItemRectMin().y + ImGui.GetItemRectMax().y) / 2f), 1, node.Outputs[i].Id, ReadOnly);
@@ -249,12 +277,20 @@ namespace Stagehand {
                 ImGui.End();
                 node.Style.Pop();
 
+                // TODO: Don't draw connections if neither node is visible.
+
                 foreach (var connection in node.Connections) {
                     var parentNode = _nodes[connection.Parent];
-                    var start = new Vector2(parentNode.Pos.x + parentNode.Size.x, parentNode.Pos.y);
-                    var end = new Vector2(node.Pos.x, node.Pos.y);
-                    var mid = Vector2.Lerp(start, end, 0.5f);
-                    bgDrawList.AddBezierCurve(start, mid, mid, end, ColorWhite, 2f);
+                    switch (connection.Type) {
+                    case Connection.ConnectionType.Inherited:
+                        DrawCurvedLine(bgDrawList, new Vector2(parentNode.Pos.x + parentNode.Size.x, parentNode.Pos.y), node.Pos, new Vector2(20f, 20f), ColorWhite, 2f);
+                        break;
+                    case Connection.ConnectionType.Recursive:
+                        DrawCurvedLine(bgDrawList, new Vector2(parentNode.Pos.x + parentNode.Size.x, parentNode.Pos.y + parentNode.Size.y), node.Pos + new Vector2(0f, node.Size.y), new Vector2(20f, 20f), ColorWhite, 2f);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                    }
                 }
             }
         }

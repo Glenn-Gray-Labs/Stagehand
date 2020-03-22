@@ -1,26 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Linq;
 using System.Threading;
+using Ludiq.FullSerializer.Internal;
+using UnityEngine;
 
-namespace Plugins.Stagehand {
+namespace Stagehand {
 	public static class Stage {
-#if UNITY_EDITOR
-		public class BenchmarkConfig {
-			public int Iterations = 1000000;
-		}
-		private static readonly BenchmarkConfig _defaultBenchmarkConfig = new BenchmarkConfig();
-		public static void Benchmark(Action action, BenchmarkConfig benchmarkConfig = null) {
-			if (benchmarkConfig == null) benchmarkConfig = _defaultBenchmarkConfig;
-			var stopwatch = Stopwatch.StartNew();
-			for (var i = 0; i < benchmarkConfig.Iterations; ++i) {
-				action();
-			}
-			stopwatch.Stop();
-			UnityEngine.Debug.Log($"{benchmarkConfig.Iterations}x in {stopwatch.ElapsedMilliseconds / 1000f}s");
-		}
-
+#if DEBUG
 		public static HashSet<Type> Children { get; } = new HashSet<Type>();
 		public static Dictionary<Type, HashSet<Type>> Relationships { get; } = new Dictionary<Type, HashSet<Type>>();
 
@@ -35,6 +23,29 @@ namespace Plugins.Stagehand {
 			public override string ToString() {
 				return _name;
 			}
+		}
+
+		private static IEnumerator _vanilla() {
+			yield break;
+		}
+		private static IEnumerator __vanilla = _vanilla();
+		
+		public static Dictionary<Type, List<IEnumerator>> _GetQueue(Type type) {
+			var dictionary = new Dictionary<Type, List<IEnumerator>>();
+			foreach (var queue in _queues) {
+				foreach (var action in queue) {
+					var fields = action.GetType().GetDeclaredFields();
+					for (var i = __vanilla.GetType().GetDeclaredFields().Length; i < fields.Length; ++i) {
+						if (fields[i].FieldType != type) continue;
+						if (!dictionary.TryGetValue(type, out var actions)) {
+							actions = new List<IEnumerator>();
+							dictionary.Add(type, actions);						
+						}
+						actions.Add(action);
+					}
+				}
+			}
+			return dictionary;
 		}
 #else
 		// Thin Wrapper for Convenience and Code Clarity
@@ -124,7 +135,6 @@ namespace Plugins.Stagehand {
 			_value = value;
 		}
 
-		// TODO: Investigate methods for benchmarking ref, in, and standard copy/move semantics in runtime.
 		public delegate IEnumerator ActionWrapper(ref T value);
 		public static void Hand(ActionWrapper action) {
 #if UNITY_EDITOR
@@ -158,9 +168,5 @@ namespace Plugins.Stagehand {
 		public static void Hand() {
 			Stage._consume(Stage._queues[_enumeratorIndex]);
 		}
-		
-#if UNITY_EDITOR
-		
-#endif
 	}
 }

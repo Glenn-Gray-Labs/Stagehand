@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Plugins.Stagehand;
+using Stagehand;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -402,16 +402,16 @@ PARSE_EXPONENT:
 		Stage<Config>.Hand((ref Config config) => _deserializeInto(config, _parseJson(_readFile("Assets/Tests/JSON/backstage.json"))));*/
 
 		// Relationships
-		Stage<Config>.Hand((ref Config config) =>  null);
-		Stage<Config>.Hand((ref Config config, ref Main main) =>  null);
-		Stage<Config>.Hand((ref Config config, ref IEnumerator enumerator) =>  null);
+		Stage<Config>.Hand((ref Config config) => _deserializeInto(config, _parseJson(_readFile("Assets/Tests/JSON/backstage.json"))));
+		Stage<Main>.Hand((ref Main main, ref Config config) =>  _readFile("Assets/Tests/JSON/backstage.json"));
+		/*Stage<Config>.Hand((ref Config config, ref IEnumerator enumerator) =>  null);
 		Stage<Main>.Hand((ref Main main) =>  null);
 		Stage<Main>.Hand((ref Main main, ref IEnumerator enumerator) =>  null);
 		Stage<GameManager>.Hand((ref GameManager gameManager) =>  null);
 		Stage<GameManager>.Hand((ref GameManager gameManager, ref Config config) =>  null);
 		Stage<GameManager>.Hand((ref GameManager gameManager, ref Main main) =>  null);
 		Stage<IEnumerator>.Hand((ref IEnumerator enumeratorA, ref IEnumerator enumeratorB) =>  null);
-		Stage<IEnumerator>.Hand((ref IEnumerator enumerator, ref Config config) =>  null);
+		Stage<IEnumerator>.Hand((ref IEnumerator enumerator, ref Config config) =>  null);*/
 
 		// Config
 		/*IEnumerator _parseConfig(Config cfg) {
