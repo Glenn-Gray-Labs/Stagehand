@@ -22,26 +22,36 @@ namespace Stagehand {
         private readonly List<NodeSize> _rowSizes = new List<NodeSize>(new[] { new NodeSize() });
         private readonly List<NodeSize> _columnSizes = new List<NodeSize>(new[] { new NodeSize() });
 
+        // Helpers
+        public static string _friendlyTypeName(Type type) {
+            var argName = type.ToString();
+            // Sandbox+<<-cctor>g___deserializeInto|3_11>d`1[Sandbox+Config] => _deserializeInto
+            int start, end = argName.LastIndexOf('|');
+            if (end > -1) {
+                start = argName.LastIndexOf('>', end);
+                argName = argName.Substring(start + 4, end - start - 4);
+            }
+            // Sandbox+Config => Config
+            start = argName.LastIndexOf('+');
+            if (start > -1) argName = argName.Substring(start + 1);
+            // System.Collections.Generic.Queue`1[System.Int64] => Queue
+            end = argName.IndexOf('`');
+            if (end == -1) end = argName.Length;
+            // System.String => String
+            start = argName.LastIndexOf('.', end - 1) + 1;
+            return argName.Substring(start, end - start);
+        }
+
+        public static string _friendlyTypeName(Type type, string name) {
+            return $"{name} ({_friendlyTypeName(type)})";
+        }
+
         // Node Inputs/Outputs
         [Serializable] public class NodeIO {
             public readonly string Id;
             public readonly Type Type;
             public readonly string Name;
             public readonly List<NodeIO> Connections = new List<NodeIO>();
-
-            private static string _friendlyTypeName(Type type) {
-                // System.Collections.Generic.Queue`1[System.Int64] => Queue
-                // System.String => String
-                var argName = type.ToString();
-                var tildeOrLength = argName.IndexOf('`');
-                if (tildeOrLength == -1) tildeOrLength = argName.Length;
-                var startIndex = argName.LastIndexOf('.', tildeOrLength - 1) + 1;
-                return argName.Substring(startIndex, tildeOrLength - startIndex);
-            }
-
-            private static string _friendlyTypeName(Type type, string name) {
-                return $"{name} ({_friendlyTypeName(type)})";
-            }
 
             public NodeIO(Type type, string name) {
                 Id = (++_nextId).ToString();
@@ -89,13 +99,13 @@ namespace Stagehand {
             public Vector2 Size;
             public Vector2 Pos;
 
-            public Node(Type type, NodeIO[] inputs, NodeIO[] outputs, int row, int column, Type parentType = null) {
+            public Node(Type type, NodeIO[] inputs, NodeIO[] outputs, int row, int column) {
                 Id = (++_nextId).ToString();
                 Type = type;
                 Inputs = inputs;
                 Outputs = outputs;
 
-                Title = parentType == null ? Type.Name : $"{parentType.Name}->{Type.Name}";
+                Title = _friendlyTypeName(Type);
                 Name = $"{Title}##{Id}";
 
                 var rowCount = Inputs.Length > Outputs.Length ? Inputs.Length : Outputs.Length;

@@ -32,6 +32,10 @@ public class Sandbox : MonoBehaviour {
 	}
 
 	static Sandbox() {
+		IEnumerator _noop() {
+			yield break;
+		}
+		
 		IEnumerator _log(string message) {
 			Debug.Log(message);
 			yield break;
@@ -399,18 +403,24 @@ PARSE_EXPONENT:
 		// Roots
 		var localConfig = new Config();
 		Stage<Config>.Hand(ref localConfig);
-		Stage<Config>.Hand((ref Config config) => _deserializeInto(config, _parseJson(_readFile("Assets/Tests/JSON/backstage.json"))));
+		
+		
+		Stage<Config>.Hand((ref Config config) =>  _parseJson(_readFile("Assets/Tests/JSON/backstage.json")));
+		//Stage<Config>.Hand((ref Config config) => _deserializeInto(config, _parseJson(_readFile("Assets/Tests/JSON/backstage.json"))));
+		
+		
+		
 		Stage<Main>.Hand((ref Main main, ref Config config) => _readFile("Assets/Tests/JSON/backstage.json"));
 
 		// Relationships
-		Stage<Config>.Hand((ref Config config, ref IEnumerator enumerator) => null);
-		Stage<Main>.Hand((ref Main main) => null);
-		Stage<Main>.Hand((ref Main main, ref IEnumerator enumerator) => null);
-		Stage<Sandbox>.Hand((ref Sandbox sandbox) => null);
-		Stage<Sandbox>.Hand((ref Sandbox sandbox, ref Config config) => null);
-		Stage<Sandbox>.Hand((ref Sandbox sandbox, ref Main main) => null);
-		Stage<IEnumerator>.Hand((ref IEnumerator enumeratorA, ref IEnumerator enumeratorB) => null);
-		Stage<IEnumerator>.Hand((ref IEnumerator enumerator, ref Config config) => null);
+		Stage<Config>.Hand((ref Config config, ref IEnumerator enumerator) => _noop());
+		Stage<Main>.Hand((ref Main main) => _noop());
+		Stage<Main>.Hand((ref Main main, ref IEnumerator enumerator) => _noop());
+		Stage<Sandbox>.Hand((ref Sandbox sandbox) => _noop());
+		Stage<Sandbox>.Hand((ref Sandbox sandbox, ref Config config) => _noop());
+		Stage<Sandbox>.Hand((ref Sandbox sandbox, ref Main main) => _noop());
+		Stage<IEnumerator>.Hand((ref IEnumerator enumeratorA, ref IEnumerator enumeratorB) => _noop());
+		Stage<IEnumerator>.Hand((ref IEnumerator enumerator, ref Config config) => _noop());
 
 		// Config
 		/*IEnumerator _parseConfig(Config cfg) {

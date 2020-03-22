@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
-using Ludiq.FullSerializer.Internal;
 
 namespace Stagehand {
 	public static class Stage {
@@ -23,24 +22,15 @@ namespace Stagehand {
 			}
 		}
 
-		private static IEnumerator _vanilla() {
-			yield break;
-		}
-		private static IEnumerator __vanilla = _vanilla();
-
 		public static Dictionary<Type, List<IEnumerator>> _GetQueue(Type type) {
 			var dictionary = new Dictionary<Type, List<IEnumerator>>();
 			foreach (var queue in _queues) {
 				foreach (var action in queue) {
-					var fields = action.GetType().GetDeclaredFields();
-					for (var i = __vanilla.GetType().GetDeclaredFields().Length; i < fields.Length; ++i) {
-						if (fields[i].FieldType != type) continue;
-						if (!dictionary.TryGetValue(type, out var actions)) {
-							actions = new List<IEnumerator>();
-							dictionary.Add(type, actions);						
-						}
-						actions.Add(action);
+					if (!dictionary.TryGetValue(type, out var actions)) {
+						actions = new List<IEnumerator>();
+						dictionary.Add(type, actions);						
 					}
+					actions.Add(action);
 				}
 			}
 			return dictionary;

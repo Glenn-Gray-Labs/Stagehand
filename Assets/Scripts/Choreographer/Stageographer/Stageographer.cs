@@ -7,6 +7,12 @@ using UnityEngine;
 
 namespace Stagehand {
 	public class Stageographer : MonoBehaviour {
+		private static IEnumerator _vanilla() {
+			yield break;
+		}
+		private static readonly IEnumerator __vanilla = _vanilla();
+		private static readonly int _skipVanillaFields = __vanilla.GetType().GetFields().Length;
+
 		private void Awake() {
 			if (!EditorApplication.isPlaying) return;
 
@@ -36,13 +42,22 @@ namespace Stagehand {
 					nodes.Add(node);
 
 					// Stagehand Queues
-					/*foreach (var typeActions in Stage._GetQueue(type)) {
-						foreach (var typeAction in typeActions.Value) {
-							var actionNode = new Choreographer.Node(typeAction.GetType(), new Choreographer.NodeIO[] { }, new Choreographer.NodeIO[] { }, row, ++column);
+					foreach (var actionPair in Stage._GetQueue(type)) {
+						foreach (var action in actionPair.Value) {
+							var actionInputs = new List<Choreographer.NodeIO>();
+							var actionOutputs = new List<Choreographer.NodeIO>();
+
+							var actionType = action.GetType();
+							var fields = actionType.GetFields();
+							for (var i = _skipVanillaFields; i < fields.Length; ++i) {
+								actionInputs.Add(new Choreographer.NodeIO(fields[i].FieldType, fields[i].Name));
+							}
+
+							var actionNode = new Choreographer.Node(actionType, actionInputs.ToArray(), actionOutputs.ToArray(), row, ++column);
 							graph.Add(actionNode);
 							nodes.Add(actionNode);
 						}
-					}*/
+					}
 
 					// Infinite Recursion
 					if (parents.Contains(type)) {
