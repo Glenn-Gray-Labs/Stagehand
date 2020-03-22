@@ -397,21 +397,20 @@ PARSE_EXPONENT:
 		//Stage<MonoBehaviour>.Hand((ref MonoBehaviour monoBehaviour) => null);
 
 		// Roots
-		/*var localConfig = new Config();
+		var localConfig = new Config();
 		Stage<Config>.Hand(ref localConfig);
-		Stage<Config>.Hand((ref Config config) => _deserializeInto(config, _parseJson(_readFile("Assets/Tests/JSON/backstage.json"))));*/
+		Stage<Config>.Hand((ref Config config) => _deserializeInto(config, _parseJson(_readFile("Assets/Tests/JSON/backstage.json"))));
+		Stage<Main>.Hand((ref Main main, ref Config config) => _readFile("Assets/Tests/JSON/backstage.json"));
 
 		// Relationships
-		Stage<Config>.Hand((ref Config config) => _deserializeInto(config, _parseJson(_readFile("Assets/Tests/JSON/backstage.json"))));
-		Stage<Main>.Hand((ref Main main, ref Config config) =>  _readFile("Assets/Tests/JSON/backstage.json"));
-		/*Stage<Config>.Hand((ref Config config, ref IEnumerator enumerator) =>  null);
-		Stage<Main>.Hand((ref Main main) =>  null);
-		Stage<Main>.Hand((ref Main main, ref IEnumerator enumerator) =>  null);
-		Stage<GameManager>.Hand((ref GameManager gameManager) =>  null);
-		Stage<GameManager>.Hand((ref GameManager gameManager, ref Config config) =>  null);
-		Stage<GameManager>.Hand((ref GameManager gameManager, ref Main main) =>  null);
-		Stage<IEnumerator>.Hand((ref IEnumerator enumeratorA, ref IEnumerator enumeratorB) =>  null);
-		Stage<IEnumerator>.Hand((ref IEnumerator enumerator, ref Config config) =>  null);*/
+		Stage<Config>.Hand((ref Config config, ref IEnumerator enumerator) => null);
+		Stage<Main>.Hand((ref Main main) => null);
+		Stage<Main>.Hand((ref Main main, ref IEnumerator enumerator) => null);
+		Stage<GameManager>.Hand((ref GameManager gameManager) => null);
+		Stage<GameManager>.Hand((ref GameManager gameManager, ref Config config) => null);
+		Stage<GameManager>.Hand((ref GameManager gameManager, ref Main main) => null);
+		Stage<IEnumerator>.Hand((ref IEnumerator enumeratorA, ref IEnumerator enumeratorB) => null);
+		Stage<IEnumerator>.Hand((ref IEnumerator enumerator, ref Config config) => null);
 
 		// Config
 		/*IEnumerator _parseConfig(Config cfg) {

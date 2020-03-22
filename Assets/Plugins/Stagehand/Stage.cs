@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using Ludiq.FullSerializer.Internal;
-using UnityEngine;
 
 namespace Stagehand {
 	public static class Stage {
@@ -29,7 +27,7 @@ namespace Stagehand {
 			yield break;
 		}
 		private static IEnumerator __vanilla = _vanilla();
-		
+
 		public static Dictionary<Type, List<IEnumerator>> _GetQueue(Type type) {
 			var dictionary = new Dictionary<Type, List<IEnumerator>>();
 			foreach (var queue in _queues) {
@@ -115,7 +113,7 @@ namespace Stagehand {
 	}
 
 	public static class Stage<T> where T : class {
-#if UNITY_EDITOR
+#if DEBUG
 		public static HashSet<Type> Parents { get; } = new HashSet<Type>();
 		public static HashSet<Type> Children { get; } = new HashSet<Type>();
 		public static bool IsDisconnected => Parents.Count == 0;
@@ -137,7 +135,7 @@ namespace Stagehand {
 
 		public delegate IEnumerator ActionWrapper(ref T value);
 		public static void Hand(ActionWrapper action) {
-#if UNITY_EDITOR
+#if DEBUG
 			// Track Connections
 			Stage.Children.Add(typeof(T));
 #endif
@@ -147,15 +145,14 @@ namespace Stagehand {
 
 		public delegate IEnumerator ActionWrapper<T2>(ref T value1, ref T2 value2);
 		public static void Hand<T2>(ActionWrapper<T2> action) where T2 : class {
-#if UNITY_EDITOR
+#if DEBUG
 			// Track Connections
-			HashSet<Type> children;
-			if (!Stage.Relationships.TryGetValue(typeof(T), out children)) {
+			if (!Stage.Relationships.TryGetValue(typeof(T), out var children)) {
 				Stage.Relationships.Add(typeof(T), children = new HashSet<Type>());
+				children.Add(typeof(T2));
+				Stage<T2>.Parents.Add(typeof(T));
+				Children.Add(typeof(T2));
 			}
-			children.Add(typeof(T2));
-			Stage<T2>.Parents.Add(typeof(T));
-			Children.Add(typeof(T2));
 #endif
 
 			// TODO: Explore global actions which execute in-between through a mask of flags.

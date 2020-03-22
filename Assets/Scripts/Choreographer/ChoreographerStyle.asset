@@ -19,7 +19,7 @@ MonoBehaviour:
   WindowMinSize: {x: 32, y: 32}
   WindowTitleAlign: {x: 0, y: 0.33333334}
   WindowMenuButtonPosition: 0
-  ChildRounding: 0
+  ChildRounding: 6
   ChildBorderSize: 1
   PopupRounding: 0
   PopupBorderSize: 1

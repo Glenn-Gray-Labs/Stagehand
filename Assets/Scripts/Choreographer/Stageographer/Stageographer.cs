@@ -36,13 +36,13 @@ namespace Stagehand {
 					nodes.Add(node);
 
 					// Stagehand Queues
-					foreach (var typeActions in Stage._GetQueue(type)) {
+					/*foreach (var typeActions in Stage._GetQueue(type)) {
 						foreach (var typeAction in typeActions.Value) {
 							var actionNode = new Choreographer.Node(typeAction.GetType(), new Choreographer.NodeIO[] { }, new Choreographer.NodeIO[] { }, row, ++column);
 							graph.Add(actionNode);
 							nodes.Add(actionNode);
 						}
-					}
+					}*/
 
 					// Infinite Recursion
 					if (parents.Contains(type)) {
