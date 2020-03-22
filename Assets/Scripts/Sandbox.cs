@@ -9,7 +9,7 @@ using Stagehand;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
-public class GameManager : MonoBehaviour {
+public class Sandbox : MonoBehaviour {
 	public class Config {
 		public readonly Queue<long> times = new Queue<long>();
 
@@ -31,7 +31,7 @@ public class GameManager : MonoBehaviour {
 		public string MainName;
 	}
 
-	static GameManager() {
+	static Sandbox() {
 		IEnumerator _log(string message) {
 			Debug.Log(message);
 			yield break;
@@ -406,9 +406,9 @@ PARSE_EXPONENT:
 		Stage<Config>.Hand((ref Config config, ref IEnumerator enumerator) => null);
 		Stage<Main>.Hand((ref Main main) => null);
 		Stage<Main>.Hand((ref Main main, ref IEnumerator enumerator) => null);
-		Stage<GameManager>.Hand((ref GameManager gameManager) => null);
-		Stage<GameManager>.Hand((ref GameManager gameManager, ref Config config) => null);
-		Stage<GameManager>.Hand((ref GameManager gameManager, ref Main main) => null);
+		Stage<Sandbox>.Hand((ref Sandbox sandbox) => null);
+		Stage<Sandbox>.Hand((ref Sandbox sandbox, ref Config config) => null);
+		Stage<Sandbox>.Hand((ref Sandbox sandbox, ref Main main) => null);
 		Stage<IEnumerator>.Hand((ref IEnumerator enumeratorA, ref IEnumerator enumeratorB) => null);
 		Stage<IEnumerator>.Hand((ref IEnumerator enumerator, ref Config config) => null);
 

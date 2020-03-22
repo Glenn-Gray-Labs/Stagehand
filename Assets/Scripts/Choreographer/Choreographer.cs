@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Bolt;
 using ImGuiNET;
-using MiscUtil.Collections.Extensions;
 using UnityEngine;
 
 namespace Stagehand {
@@ -11,7 +10,7 @@ namespace Stagehand {
         private static int _nextId;
 
         // Read/Write Feature
-        public const bool ReadOnly = true;
+        public bool ReadOnly = true;
 
         // Auto-Layout Feature
         public const float Padding = 80f;
@@ -238,6 +237,7 @@ namespace Stagehand {
             ImGui.SetNextWindowSize(new Vector2(Screen.width, Screen.height));
             ImGui.SetNextWindowPos(Vector2.zero);
             ImGui.SetNextWindowContentSize(Vector2.one * 20000f);
+            ImGui.SetNextWindowFocus();
             if (ImGui.Begin("Choreographer", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoScrollbar)) {
                 // TODO: ImGui shortcoming? Can't "SetNextScrollX" so have to this (nasty hack) here. >_<
                 if (ScrollPosition.x == 0f) {
@@ -246,6 +246,12 @@ namespace Stagehand {
                 } else {
                     ScrollPosition.x = ImGui.GetScrollX();
                     ScrollPosition.y = ImGui.GetScrollY();
+                    if (ImGui.IsMouseDragging(ImGuiMouseButton.Right)) {
+                        ScrollPosition -= ImGui.GetMouseDragDelta(ImGuiMouseButton.Right);
+                        ImGui.ResetMouseDragDelta(ImGuiMouseButton.Right);
+                        ImGui.SetScrollX(ScrollPosition.x);
+                        ImGui.SetScrollY(ScrollPosition.y);
+                    }
                     if (ScrollPosition.x < 1f) ImGui.SetScrollX(ScrollPosition.x = 1f);
                     if (ScrollPosition.y < 1f) ImGui.SetScrollY(ScrollPosition.y = 1f);
                 }
@@ -259,10 +265,14 @@ namespace Stagehand {
 
                 var imGuiStyle = ImGui.GetStyle();
                 foreach (var node in Nodes) {
+                    var flags = ImGuiWindowFlags.ChildWindow | ImGuiWindowFlags.NoResize;
+                    if (ReadOnly) flags |= ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoSavedSettings;
                     ImGui.SetNextWindowSize(node.Size);
                     ImGui.SetNextWindowPos(node.Pos - ScrollPosition);
                     node.Style.Push();
-                    if (ImGui.Begin(node.Name, ReadOnly ? ImGuiWindowFlags.ChildWindow | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoSavedSettings : ImGuiWindowFlags.NoResize)) {
+                    if (ImGui.Begin(node.Name, flags)) {
+                        if (!ReadOnly) node.Pos = ImGui.GetWindowPos() + ScrollPosition;
+
                         var drawList = ImGui.IsWindowFocused() | ImGui.IsWindowHovered() ? ImGui.GetForegroundDrawList() : ImGui.GetBackgroundDrawList();
                         CustomEvent.Trigger(gameObject, "OnNode", drawList, node);
                         ImGui.Columns(2, "Column", false);
@@ -301,7 +311,7 @@ namespace Stagehand {
                     ImGui.End();
                     node.Style.Pop();
 
-                    // TODO: Don't draw connections if neither node is visible.
+                    // TODO: Don't draw connections if neither node is visible? Edge Case: If the viewport is in-between the two nodes, the line should be visible.
 
                     foreach (var connection in node.Connections) {
                         var parentNode = _nodes[connection.Parent];
@@ -319,6 +329,11 @@ namespace Stagehand {
                 }
             }
             ImGui.End();
+
+            if (ImGui.BeginMainMenuBar()) {
+                ImGui.Checkbox("Read Only", ref ReadOnly);
+                ImGui.EndMainMenuBar();
+            }
 
             CustomEvent.Trigger(gameObject, "OnLayout");
         }

@@ -189,15 +189,15 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 467407068}
-  - component: {fileID: 467407069}
   - component: {fileID: 467407070}
   - component: {fileID: 467407071}
   - component: {fileID: 467407072}
   - component: {fileID: 467407075}
+  - component: {fileID: 467407069}
   - component: {fileID: 467407074}
   - component: {fileID: 467407073}
   m_Layer: 0
-  m_Name: GameManager
+  m_Name: Sandbox
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -292,6 +292,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0cf8be2cc8ad1a42be0ea35354bcc9f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ReadOnly: 1
 --- !u!114 &467407073
 MonoBehaviour:
   m_ObjectHideFlags: 0
