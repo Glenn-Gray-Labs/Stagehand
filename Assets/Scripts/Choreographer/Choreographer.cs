@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using Bolt;
 using ImGuiNET;
 using UnityEngine;
@@ -96,8 +97,8 @@ namespace Stagehand {
             // Auto-Layout Feature
             public readonly int Row;
             public readonly int Column;
-            public Vector2 Size;
             public Vector2 Pos;
+            public Vector2 Size;
 
             public Node(Type type, NodeIO[] inputs, NodeIO[] outputs, int row, int column) {
                 Id = (++_nextId).ToString();
@@ -160,8 +161,11 @@ namespace Stagehand {
         public static readonly uint ColorGridLineHorizontal = ImGui.ColorConvertFloat4ToU32(new Vector4(0.1f, 0.1f, 0.1f, 1f));
         public static readonly uint ColorGridLineVertical = ColorGridLineHorizontal;
 
+        public static readonly Vector2 DefaultLineCurveStrength = new Vector2(40f, 40f);
+
+        // Main Window
         public static readonly Vector2 ContentSize = Vector2.one * 20000f;
-        public static readonly Vector2 CenterPosition = ContentSize / 2f;
+        public static readonly Vector2 CenterPosition = Vector2.one * 200f; //ContentSize / 2f;
         public static Vector2 ScrollPosition = Vector2.zero;
 
         private void OnEnable() {
@@ -229,27 +233,53 @@ namespace Stagehand {
                 _adjustCumulativeSize(node.Row, _rowSizes, node.Size.y);
             }
 
+            // TODO: HACK: ImGui shortcoming? We build a custom INI here so that we can avoid a bunch of OTHER hacks involving window pos/size...
+            var iniData = new StringBuilder();
             foreach (var node in Nodes) {
                 node.Pos = new Vector2(
                     node.Column == 0 ? (_columnSizes[node.Column].CumulativeSize - node.Size.x) / 2f : Padding * node.Column + _columnSizes[node.Column - 1].CumulativeSize + (_columnSizes[node.Column].CumulativeSize - _columnSizes[node.Column - 1].CumulativeSize - node.Size.x) / 2f, 
                     node.Row == 0 ? (_rowSizes[node.Row].CumulativeSize - node.Size.y) / 2f : Padding * node.Row + _rowSizes[node.Row - 1].CumulativeSize + (_rowSizes[node.Row].CumulativeSize - _rowSizes[node.Row - 1].CumulativeSize - node.Size.y) / 2f
                 ) + CenterPosition;
+
+                iniData.Append($"[Window][{node.Name}]\nPos={(int)node.Pos.x},{(int)node.Pos.y}\nSize={(int)node.Size.x},{(int)node.Size.y}\n");
+
                 _nodes.Add(node, node);
             }
+            ImGui.LoadIniSettingsFromMemory(iniData.ToString(), (uint) iniData.Length);
         }
 
-        private static void DrawCurvedLine(ImDrawListPtr drawList, Vector2 start, Vector2 end, Vector2 curveStrength, uint color, float thickness) {
+        public static Vector2 Scale(Vector2 value) {
+            return value * ImGui.GetIO().FontGlobalScale;
+        }
+
+        public static float Scale(float value) {
+            return value * ImGui.GetIO().FontGlobalScale;
+        }
+
+        public static void DrawCurvedLine(ImDrawListPtr drawList, Vector2 start, Vector2 end, uint color, Vector2 curveStrength, float thickness) {
             var direction = (end - start).normalized;
-            drawList.AddBezierCurve(start - ScrollPosition, (start + direction * curveStrength) - ScrollPosition, (end - direction * curveStrength) - ScrollPosition, end - ScrollPosition, color, thickness);
+            direction *= direction;
+            drawList.AddBezierCurve(
+            Scale(start - ScrollPosition),
+            Scale(start + direction * curveStrength - ScrollPosition),
+            Scale(end - direction * curveStrength - ScrollPosition),
+            Scale(end - ScrollPosition),
+                color,
+                thickness
+            );
+        }
+
+        public static void DrawCurvedLine(ImDrawListPtr drawList, Vector2 start, Vector2 end) {
+            DrawCurvedLine(drawList, start, end, ColorWhite, DefaultLineCurveStrength, 2f);
         }
 
         private void OnLayout() {
-            ImGui.SetNextWindowSize(new Vector2(Screen.width, Screen.height));
             ImGui.SetNextWindowPos(Vector2.zero);
+            ImGui.SetNextWindowSize(new Vector2(Screen.width, Screen.height));
             ImGui.SetNextWindowContentSize(Vector2.one * 20000f);
             ImGui.SetNextWindowFocus();
             if (ImGui.Begin("Choreographer", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoScrollbar)) {
-                // TODO: ImGui shortcoming? Can't "SetNextScrollX" so have to this (nasty hack) here. >_<
+                // TODO: HACK: ImGui shortcoming? Can't "SetNextScrollX" so have to this (nasty hack) here. >_<
                 if (ScrollPosition.x == 0f) {
                     ImGui.SetScrollX(ScrollPosition.x = CenterPosition.x - Padding);
                     ImGui.SetScrollY(ScrollPosition.y = CenterPosition.y - Padding);
@@ -266,7 +296,7 @@ namespace Stagehand {
                     if (ScrollPosition.y < 1f) ImGui.SetScrollY(ScrollPosition.y = 1f);
                 }
 
-                var bgDrawList = ImGui.GetBackgroundDrawList();
+                ImDrawListPtr bgDrawList = ImGui.GetBackgroundDrawList(), fgDrawList = ImGui.GetForegroundDrawList();
                 bgDrawList.AddRectFilled(Vector2.zero, new Vector2(2000f, 2000f), ColorBackground);
                 for (var i = 1; i < 19; ++i) {
                     bgDrawList.AddLine(new Vector2(0f, i * 100f), new Vector2(2000f, i * 100f), ColorGridLineHorizontal, 1f);
@@ -275,27 +305,26 @@ namespace Stagehand {
 
                 var imGuiStyle = ImGui.GetStyle();
                 foreach (var node in Nodes) {
-                    var flags = ImGuiWindowFlags.ChildWindow | ImGuiWindowFlags.NoResize;
-                    if (ReadOnly) flags |= ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoSavedSettings;
-                    ImGui.SetNextWindowSize(node.Size);
-                    ImGui.SetNextWindowPos(node.Pos - ScrollPosition);
                     node.Style.Push();
+                    var flags = ImGuiWindowFlags.NoResize;
+                    if (ReadOnly) flags |= ImGuiWindowFlags.NoMove;
+                    if (ImGui.GetIO().FontGlobalScale != 1f) {
+                        ImGui.SetNextWindowPos(Scale(node.Pos - ScrollPosition));
+                        ImGui.SetNextWindowSize(Scale(node.Size));
+                    }
                     if (ImGui.Begin(node.Name, flags)) {
-                        if (!ReadOnly) node.Pos = ImGui.GetWindowPos() + ScrollPosition;
-
                         var drawList = ImGui.IsWindowFocused() | ImGui.IsWindowHovered() ? ImGui.GetForegroundDrawList() : ImGui.GetBackgroundDrawList();
                         CustomEvent.Trigger(gameObject, "OnNode", drawList, node);
                         ImGui.Columns(2, "Column", false);
-                        ImGui.SetColumnWidth(0, node.LeftSize.x);
-                        ImGui.SetColumnOffset(1, node.LeftSize.x);
-                        ImGui.SetColumnWidth(1, node.RightSize.x);
+                        ImGui.SetColumnWidth(0, Scale(node.LeftSize.x));
+                        ImGui.SetColumnOffset(1, Scale(node.LeftSize.x));
+                        ImGui.SetColumnWidth(1, Scale(node.RightSize.x));
                         for (var i = 0; i < node.RowHeights.Length; ++i) {
                             if (i < node.Inputs.Length) {
                                 ImGui.PushID(node.Inputs[i].Id);
-                                if (ImGui.Selectable(node.Inputs[i].Name, false, ReadOnly ? ImGuiSelectableFlags.Disabled : ImGuiSelectableFlags.None, new Vector2(node.LeftSize.x, node.RowHeights[i]))) {
+                                if (ImGui.Selectable(node.Inputs[i].Name, false, ReadOnly ? ImGuiSelectableFlags.Disabled : ImGuiSelectableFlags.None, Scale(new Vector2(node.LeftSize.x, node.RowHeights[i])))) {
                                     CustomEvent.Trigger(gameObject, "OnInput", drawList, node.Inputs[i].Id);
                                 }
-
                                 CustomEvent.Trigger(gameObject, "OnConnection", drawList, new Vector2(ImGui.GetItemRectMin().x, (ImGui.GetItemRectMin().y + ImGui.GetItemRectMax().y) / 2f), -1, node.Inputs[i].Id, ReadOnly);
                                 ImGui.PopID();
                             }
@@ -305,10 +334,9 @@ namespace Stagehand {
                                 ImGui.PushID(node.Outputs[i].Id);
                                 ImGui.PushStyleVar(ImGuiStyleVar.SelectableTextAlign, new Vector2(1.0f, 0f));
                                 ImGui.Unindent(imGuiStyle.ItemSpacing.x);
-                                if (ImGui.Selectable(node.Outputs[i].Name, false, ReadOnly ? ImGuiSelectableFlags.Disabled : ImGuiSelectableFlags.None, new Vector2(node.RightSize.x, node.RowHeights[i]))) {
+                                if (ImGui.Selectable(node.Outputs[i].Name, false, ReadOnly ? ImGuiSelectableFlags.Disabled : ImGuiSelectableFlags.None, Scale(new Vector2(node.RightSize.x, node.RowHeights[i])))) {
                                     CustomEvent.Trigger(gameObject, "OnOutput", drawList, node.Outputs[i].Id);
                                 }
-
                                 CustomEvent.Trigger(gameObject, "OnConnection", drawList, new Vector2(ImGui.GetItemRectMax().x, (ImGui.GetItemRectMin().y + ImGui.GetItemRectMax().y) / 2f), 1, node.Outputs[i].Id, ReadOnly);
                                 ImGui.Indent(imGuiStyle.ItemSpacing.x);
                                 ImGui.PopStyleVar();
@@ -318,6 +346,7 @@ namespace Stagehand {
                         }
                         ImGui.Columns();
                     }
+                    //node.Pos = ImGui.GetWindowPos() + ScrollPosition;
                     ImGui.End();
                     node.Style.Pop();
 
@@ -326,14 +355,12 @@ namespace Stagehand {
                     foreach (var connection in node.Connections) {
                         var parentNode = _nodes[connection.Parent];
                         switch (connection.Type) {
-                            case Connection.ConnectionType.Inherited:
-                                DrawCurvedLine(bgDrawList, new Vector2(parentNode.Pos.x + parentNode.Size.x, parentNode.Pos.y), node.Pos, new Vector2(20f, 20f), ColorWhite, 2f);
-                                break;
-                            case Connection.ConnectionType.Recursive:
-                                DrawCurvedLine(bgDrawList, new Vector2(parentNode.Pos.x + parentNode.Size.x, parentNode.Pos.y + parentNode.Size.y), node.Pos + new Vector2(0f, node.Size.y), new Vector2(20f, 20f), ColorWhite, 2f);
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException();
+                        case Connection.ConnectionType.Inherited:
+                            DrawCurvedLine(fgDrawList, new Vector2(parentNode.Pos.x + parentNode.Size.x, parentNode.Pos.y), node.Pos);
+                            break;
+                        case Connection.ConnectionType.Recursive:
+                            DrawCurvedLine(fgDrawList, new Vector2(parentNode.Pos.x + parentNode.Size.x, parentNode.Pos.y + parentNode.Size.y), node.Pos + new Vector2(0f, node.Size.y));
+                            break;
                         }
                     }
                 }
@@ -342,6 +369,9 @@ namespace Stagehand {
 
             if (ImGui.BeginMainMenuBar()) {
                 ImGui.Checkbox("Read Only", ref ReadOnly);
+                if (ImGui.SliderFloat("Zoom", ref ImGui.GetIO().FontGlobalScale, 0.1f, 2f, "%.2f")) {
+                    //_refresh();
+                }
                 ImGui.EndMainMenuBar();
             }
 
