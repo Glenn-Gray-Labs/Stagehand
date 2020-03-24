@@ -20,7 +20,8 @@ namespace Stagehand {
 			var parents = new HashSet<Type>();
 			(int, List<Choreographer.Node> children) _addChildren(IEnumerable<Type> types, Choreographer.Node parent = null, int row = 0, int column = 0) {
 				var nodes = new List<Choreographer.Node>();
-				if (parent != null) nodes.Add(parent);
+				//if (parent != null) nodes.Add(parent);
+				Choreographer.Node prevNode = parent;
 				foreach (var type in types) {
 					// Parent
 					var inputs = new List<Choreographer.NodeIO>();
@@ -41,7 +42,17 @@ namespace Stagehand {
 					graph.Add(node);
 					nodes.Add(node);
 
+					// Relationship
+					if (prevNode != null) node.Connections.Add(new Choreographer.Connection(Choreographer.Connection.ConnectionType.Inherited, prevNode));
+
+					// Infinite Recursion
+					if (parents.Contains(type)) {
+						node.Connections.Add(new Choreographer.Connection(Choreographer.Connection.ConnectionType.Recursive, parent));
+						return (row + 1, nodes);
+					}
+
 					// Stagehand Queues
+					prevNode = node;
 					foreach (var actionPair in Stage._GetQueue(type)) {
 						foreach (var action in actionPair.Value) {
 							var actionInputs = new List<Choreographer.NodeIO>();
@@ -56,13 +67,11 @@ namespace Stagehand {
 							var actionNode = new Choreographer.Node(actionType, actionInputs.ToArray(), actionOutputs.ToArray(), row, ++column);
 							graph.Add(actionNode);
 							nodes.Add(actionNode);
+							
+							actionNode.Connections.Add(new Choreographer.Connection(Choreographer.Connection.ConnectionType.Inherited, prevNode));
+							
+							prevNode = actionNode;
 						}
-					}
-
-					// Infinite Recursion
-					if (parents.Contains(type)) {
-						node.Connections.Add(new Choreographer.Connection(Choreographer.Connection.ConnectionType.Recursive, parent));
-						return (row + 1, nodes);
 					}
 
 					// Leaf
@@ -76,10 +85,9 @@ namespace Stagehand {
 
 					// Relationships
 					if (childNodes == null || parent == null) continue;
-					var lastNode = parent;
 					foreach (var childNode in childNodes) {
-						childNode.Connections.Add(new Choreographer.Connection(Choreographer.Connection.ConnectionType.Inherited, lastNode));
-						lastNode = childNode;
+						childNode.Connections.Add(new Choreographer.Connection(Choreographer.Connection.ConnectionType.Inherited, prevNode));
+						prevNode = childNode;
 					}
 				}
 				return (row, nodes);

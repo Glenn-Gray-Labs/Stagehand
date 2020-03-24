@@ -137,6 +137,7 @@ namespace Stagehand {
 		public static void Hand<T2>(ActionWrapper<T2> action) where T2 : class {
 #if DEBUG
 			// Track Connections
+			Stage.Children.Add(typeof(T));
 			if (!Stage.Relationships.TryGetValue(typeof(T), out var children)) {
 				Stage.Relationships.Add(typeof(T), children = new HashSet<Type>());
 				children.Add(typeof(T2));

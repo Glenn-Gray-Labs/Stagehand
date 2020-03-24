@@ -11,7 +11,7 @@ namespace Stagehand {
         private static int _nextId;
 
         // Read/Write Feature
-        public bool ReadOnly = true;
+        public bool ReadOnly = false;
 
         // Auto-Layout Feature
         public const float Padding = 80f;
@@ -23,7 +23,12 @@ namespace Stagehand {
         private readonly List<NodeSize> _rowSizes = new List<NodeSize>(new[] { new NodeSize() });
         private readonly List<NodeSize> _columnSizes = new List<NodeSize>(new[] { new NodeSize() });
 
+        // Viewport Feature
+        private float _scaleDelta = 0f; // TODO: HACK: ImGui shortcoming? We track a delta for so many bad reasons.
+
         // Helpers
+        public static readonly Vector2 _half = Vector2.one / 2f;
+
         public static string _friendlyTypeName(Type type) {
             var argName = type.ToString();
             // Sandbox+<<-cctor>g___deserializeInto|3_11>d`1[Sandbox+Config] => _deserializeInto
@@ -121,6 +126,7 @@ namespace Stagehand {
         public static Node[] Nodes = {};
         private static Dictionary<Node, Node> _nodes = new Dictionary<Node, Node>();
 
+        // Style Feature
         public interface IStyle {
             void Push();
             void Pop();
@@ -165,7 +171,7 @@ namespace Stagehand {
 
         // Main Window
         public static readonly Vector2 ContentSize = Vector2.one * 20000f;
-        public static readonly Vector2 CenterPosition = Vector2.one * 200f; //ContentSize / 2f;
+        public static readonly Vector2 CenterPosition = ContentSize / 2f;
         public static Vector2 ScrollPosition = Vector2.zero;
 
         private void OnEnable() {
@@ -233,19 +239,14 @@ namespace Stagehand {
                 _adjustCumulativeSize(node.Row, _rowSizes, node.Size.y);
             }
 
-            // TODO: HACK: ImGui shortcoming? We build a custom INI here so that we can avoid a bunch of OTHER hacks involving window pos/size...
-            var iniData = new StringBuilder();
             foreach (var node in Nodes) {
                 node.Pos = new Vector2(
-                    node.Column == 0 ? (_columnSizes[node.Column].CumulativeSize - node.Size.x) / 2f : Padding * node.Column + _columnSizes[node.Column - 1].CumulativeSize + (_columnSizes[node.Column].CumulativeSize - _columnSizes[node.Column - 1].CumulativeSize - node.Size.x) / 2f, 
-                    node.Row == 0 ? (_rowSizes[node.Row].CumulativeSize - node.Size.y) / 2f : Padding * node.Row + _rowSizes[node.Row - 1].CumulativeSize + (_rowSizes[node.Row].CumulativeSize - _rowSizes[node.Row - 1].CumulativeSize - node.Size.y) / 2f
+                    node.Column == 0 ? 0f : Padding * node.Column + _columnSizes[node.Column - 1].CumulativeSize,
+                    node.Row == 0 ? 0f : Padding * node.Row + _rowSizes[node.Row - 1].CumulativeSize
                 ) + CenterPosition;
-
-                iniData.Append($"[Window][{node.Name}]\nPos={(int)node.Pos.x},{(int)node.Pos.y}\nSize={(int)node.Size.x},{(int)node.Size.y}\n");
 
                 _nodes.Add(node, node);
             }
-            ImGui.LoadIniSettingsFromMemory(iniData.ToString(), (uint) iniData.Length);
         }
 
         public static Vector2 Scale(Vector2 value) {
@@ -281,8 +282,8 @@ namespace Stagehand {
             if (ImGui.Begin("Choreographer", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoScrollbar)) {
                 // TODO: HACK: ImGui shortcoming? Can't "SetNextScrollX" so have to this (nasty hack) here. >_<
                 if (ScrollPosition.x == 0f) {
-                    ImGui.SetScrollX(ScrollPosition.x = CenterPosition.x - Padding);
-                    ImGui.SetScrollY(ScrollPosition.y = CenterPosition.y - Padding);
+                    ImGui.SetScrollX(ScrollPosition.x = CenterPosition.x - Padding * 2f);
+                    ImGui.SetScrollY(ScrollPosition.y = CenterPosition.y - Padding * 2f);
                 } else {
                     ScrollPosition.x = ImGui.GetScrollX();
                     ScrollPosition.y = ImGui.GetScrollY();
@@ -306,12 +307,10 @@ namespace Stagehand {
                 var imGuiStyle = ImGui.GetStyle();
                 foreach (var node in Nodes) {
                     node.Style.Push();
-                    var flags = ImGuiWindowFlags.NoResize;
-                    if (ReadOnly) flags |= ImGuiWindowFlags.NoMove;
-                    if (ImGui.GetIO().FontGlobalScale != 1f) {
-                        ImGui.SetNextWindowPos(Scale(node.Pos - ScrollPosition));
-                        ImGui.SetNextWindowSize(Scale(node.Size));
-                    }
+                    var flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoScrollbar;
+                    //if (ReadOnly) flags |= ImGuiWindowFlags.NoMove;
+                    ImGui.SetNextWindowPos(Scale(node.Pos - ScrollPosition), ImGuiCond.Always, _half);
+                    ImGui.SetNextWindowSize(Scale(node.Size), ImGuiCond.Always);
                     if (ImGui.Begin(node.Name, flags)) {
                         var drawList = ImGui.IsWindowFocused() | ImGui.IsWindowHovered() ? ImGui.GetForegroundDrawList() : ImGui.GetBackgroundDrawList();
                         CustomEvent.Trigger(gameObject, "OnNode", drawList, node);
@@ -346,7 +345,6 @@ namespace Stagehand {
                         }
                         ImGui.Columns();
                     }
-                    //node.Pos = ImGui.GetWindowPos() + ScrollPosition;
                     ImGui.End();
                     node.Style.Pop();
 
@@ -356,10 +354,10 @@ namespace Stagehand {
                         var parentNode = _nodes[connection.Parent];
                         switch (connection.Type) {
                         case Connection.ConnectionType.Inherited:
-                            DrawCurvedLine(fgDrawList, new Vector2(parentNode.Pos.x + parentNode.Size.x, parentNode.Pos.y), node.Pos);
+                            DrawCurvedLine(fgDrawList, new Vector2(parentNode.Pos.x + parentNode.Size.x / 2f, parentNode.Pos.y - parentNode.Size.y / 2f), node.Pos - node.Size / 2f);
                             break;
                         case Connection.ConnectionType.Recursive:
-                            DrawCurvedLine(fgDrawList, new Vector2(parentNode.Pos.x + parentNode.Size.x, parentNode.Pos.y + parentNode.Size.y), node.Pos + new Vector2(0f, node.Size.y));
+                            DrawCurvedLine(fgDrawList, new Vector2(parentNode.Pos.x + parentNode.Size.x / 2f, parentNode.Pos.y + parentNode.Size.y / 2f), node.Pos + new Vector2(-node.Size.x / 2f, node.Size.y / 2f));
                             break;
                         }
                     }
@@ -369,8 +367,10 @@ namespace Stagehand {
 
             if (ImGui.BeginMainMenuBar()) {
                 ImGui.Checkbox("Read Only", ref ReadOnly);
+                var scaleBefore = ImGui.GetIO().FontGlobalScale;
+                if (ImGui.GetIO().KeyCtrl) ImGui.GetIO().FontGlobalScale = Mathf.Max(0.1f, Mathf.Min(2f, ImGui.GetIO().FontGlobalScale + ImGui.GetIO().MouseWheel * 0.1f));
                 if (ImGui.SliderFloat("Zoom", ref ImGui.GetIO().FontGlobalScale, 0.1f, 2f, "%.2f")) {
-                    //_refresh();
+                    _scaleDelta = scaleBefore - ImGui.GetIO().FontGlobalScale;
                 }
                 ImGui.EndMainMenuBar();
             }
