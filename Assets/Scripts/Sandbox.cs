@@ -31,6 +31,25 @@ public class Sandbox : MonoBehaviour {
 		public string MainName;
 	}
 
+	private class A {
+		public string str = "A";
+	}
+	private class B {
+		public string str = "B";
+	}
+	private class C {
+		public string str = "C";
+	}
+	private class D {
+		public string str = "D";
+	}
+	private class E {
+		public string str = "E";
+	}
+	private class F {
+		public string str = "F";
+	}
+
 	static Sandbox() {
 		IEnumerator _noop() {
 			yield break;
@@ -407,15 +426,39 @@ PARSE_EXPONENT:
 		Stage<Main>.Hand((ref Main main, ref Config config) => _readFile("Assets/Tests/JSON/backstage.json"));*/
 
 		// Relationships
-		Stage<Config>.Hand((ref Config config) => _log("1"));
-		Stage<Main>.Hand((ref Main main) => _log("2"));
-		Stage<Main>.Hand((ref Main main, ref Config config) => _log("3"));
-		Stage<Sandbox>.Hand((ref Sandbox sandbox) => _log("4"));
-		Stage<Sandbox>.Hand((ref Sandbox sandbox, ref Config config) => _log("5"));
-		Stage<Sandbox>.Hand((ref Sandbox sandbox, ref Main main) => _log("6"));
-		Stage<IEnumerator>.Hand((ref IEnumerator enumeratorA, ref IEnumerator enumeratorB) => _log("7"));
-		Stage<Main>.Hand((ref Main main, ref IEnumerator enumerator) => _log("8"));
-		Stage<IEnumerator>.Hand((ref IEnumerator enumerator, ref Config config) => _log("9"));
+		//Stage<Config>.Hand((ref Config config) => _log("1"));
+		//Stage<Main>.Hand((ref Main main) => _log("2"));
+		//Stage<Main>.Hand((ref Main main, ref Config config) => _log("3"));
+		//Stage<Sandbox>.Hand((ref Sandbox sandbox) => _log("4"));
+		//Stage<Sandbox>.Hand((ref Sandbox sandbox, ref Config config) => _log("5"));
+		//Stage<Sandbox>.Hand((ref Sandbox sandbox, ref Main main) => _log("6"));
+		//Stage<IEnumerator>.Hand((ref IEnumerator enumeratorA, ref IEnumerator enumeratorB) => _log("7"));
+		//Stage<Main>.Hand((ref Main main, ref IEnumerator enumerator) => _log("8"));
+		//Stage<IEnumerator>.Hand((ref IEnumerator enumerator, ref Config config) => _log("9"));
+
+		// Initial Values
+		{
+			var a = new A();
+			var b = new B();
+			var c = new C();
+			var d = new D();
+			var e = new E();
+			var f = new F();
+			Stage<A>.Hand(ref a);
+			Stage<B>.Hand(ref b);
+			Stage<C>.Hand(ref c);
+			Stage<D>.Hand(ref d);
+			Stage<E>.Hand(ref e);
+			Stage<F>.Hand(ref f);
+		}
+		
+		// Relationships
+		Stage<A>.Hand((ref A a) => _log(a.str));
+		Stage<B>.Hand((ref B b) => _log(b.str));
+		Stage<C>.Hand((ref C c, ref B b) => _log($"{c.str}, {b.str}"));
+		Stage<D>.Hand((ref D d) => _log(d.str));
+		Stage<E>.Hand((ref E e, ref D d) => _log($"{e.str}, {d.str}"));
+		Stage<F>.Hand((ref F f, ref E e) => _log($"{f.str}, {e.str}"));
 
 		// Config
 		/*IEnumerator _parseConfig(Config cfg) {
