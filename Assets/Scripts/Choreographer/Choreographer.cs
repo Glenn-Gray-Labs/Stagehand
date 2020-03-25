@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using Bolt;
 using ImGuiNET;
 using UnityEngine;
@@ -22,9 +22,6 @@ namespace Stagehand {
         }
         private readonly List<NodeSize> _rowSizes = new List<NodeSize>(new[] { new NodeSize() });
         private readonly List<NodeSize> _columnSizes = new List<NodeSize>(new[] { new NodeSize() });
-
-        // Viewport Feature
-        private float _scaleDelta = 0f; // TODO: HACK: ImGui shortcoming? We track a delta for so many bad reasons.
 
         // Helpers
         public static readonly Vector2 _half = Vector2.one / 2f;
@@ -122,7 +119,7 @@ namespace Stagehand {
             }
         }
 
-        // TODO: How should we pass nodes into Choreographer?
+        // TODO: HACK: How should we communicate with Choreographer? We should store Nodes in a spatially-optimized API.
         public static Node[] Nodes = {};
         private static Dictionary<Node, Node> _nodes = new Dictionary<Node, Node>();
 
@@ -170,8 +167,7 @@ namespace Stagehand {
         public static readonly Vector2 DefaultLineCurveStrength = new Vector2(40f, 40f);
 
         // Main Window
-        public static readonly Vector2 ContentSize = Vector2.one * 20000f;
-        public static readonly Vector2 CenterPosition = ContentSize / 2f;
+        public static readonly Vector2 CenterPosition = Vector2.one * (Padding * 2f);
         public static Vector2 ScrollPosition = Vector2.zero;
 
         private void OnEnable() {
@@ -180,6 +176,7 @@ namespace Stagehand {
                 _refresh();
             }
             ImGuiUn.Layout += _beforeLayout;
+            //Stage<Node>.Hand((ref Node node) => _addNode(node));
 
             ImGuiUn.Layout += OnLayout;
         }
@@ -187,6 +184,11 @@ namespace Stagehand {
         private void OnDisable() {
             ImGuiUn.Layout -= OnLayout;
         }
+
+        // TODO: Replace _refresh with Stage<Node> system here.
+        /*IEnumerator _addNode(Node node) {
+            yield break;
+        }*/
 
         private void _refresh() {
             var imGuiStyle = ImGui.GetStyle();
@@ -280,21 +282,15 @@ namespace Stagehand {
             ImGui.SetNextWindowContentSize(Vector2.one * 20000f);
             ImGui.SetNextWindowFocus();
             if (ImGui.Begin("Choreographer", ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoScrollbar)) {
-                // TODO: HACK: ImGui shortcoming? Can't "SetNextScrollX" so have to this (nasty hack) here. >_<
-                if (ScrollPosition.x == 0f) {
-                    ImGui.SetScrollX(ScrollPosition.x = CenterPosition.x - Padding * 2f);
-                    ImGui.SetScrollY(ScrollPosition.y = CenterPosition.y - Padding * 2f);
-                } else {
+                ScrollPosition.x = ImGui.GetScrollX();
+                ScrollPosition.y = ImGui.GetScrollY();
+                if (ImGui.IsMouseDragging(ImGuiMouseButton.Right)) {
+                    ScrollPosition -= ImGui.GetMouseDragDelta(ImGuiMouseButton.Right) / ImGui.GetIO().FontGlobalScale;
+                    ImGui.ResetMouseDragDelta(ImGuiMouseButton.Right);
+                    ImGui.SetScrollX(ScrollPosition.x);
+                    ImGui.SetScrollY(ScrollPosition.y);
                     ScrollPosition.x = ImGui.GetScrollX();
                     ScrollPosition.y = ImGui.GetScrollY();
-                    if (ImGui.IsMouseDragging(ImGuiMouseButton.Right)) {
-                        ScrollPosition -= ImGui.GetMouseDragDelta(ImGuiMouseButton.Right);
-                        ImGui.ResetMouseDragDelta(ImGuiMouseButton.Right);
-                        ImGui.SetScrollX(ScrollPosition.x);
-                        ImGui.SetScrollY(ScrollPosition.y);
-                    }
-                    if (ScrollPosition.x < 1f) ImGui.SetScrollX(ScrollPosition.x = 1f);
-                    if (ScrollPosition.y < 1f) ImGui.SetScrollY(ScrollPosition.y = 1f);
                 }
 
                 ImDrawListPtr bgDrawList = ImGui.GetBackgroundDrawList(), fgDrawList = ImGui.GetForegroundDrawList();
@@ -307,11 +303,9 @@ namespace Stagehand {
                 var imGuiStyle = ImGui.GetStyle();
                 foreach (var node in Nodes) {
                     node.Style.Push();
-                    var flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoScrollbar;
-                    //if (ReadOnly) flags |= ImGuiWindowFlags.NoMove;
                     ImGui.SetNextWindowPos(Scale(node.Pos - ScrollPosition), ImGuiCond.Always, _half);
                     ImGui.SetNextWindowSize(Scale(node.Size), ImGuiCond.Always);
-                    if (ImGui.Begin(node.Name, flags)) {
+                    if (ImGui.Begin(node.Name, ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoScrollbar)) {
                         var drawList = ImGui.IsWindowFocused() | ImGui.IsWindowHovered() ? ImGui.GetForegroundDrawList() : ImGui.GetBackgroundDrawList();
                         CustomEvent.Trigger(gameObject, "OnNode", drawList, node);
                         ImGui.Columns(2, "Column", false);
@@ -367,11 +361,8 @@ namespace Stagehand {
 
             if (ImGui.BeginMainMenuBar()) {
                 ImGui.Checkbox("Read Only", ref ReadOnly);
-                var scaleBefore = ImGui.GetIO().FontGlobalScale;
                 if (ImGui.GetIO().KeyCtrl) ImGui.GetIO().FontGlobalScale = Mathf.Max(0.1f, Mathf.Min(2f, ImGui.GetIO().FontGlobalScale + ImGui.GetIO().MouseWheel * 0.1f));
-                if (ImGui.SliderFloat("Zoom", ref ImGui.GetIO().FontGlobalScale, 0.1f, 2f, "%.2f")) {
-                    _scaleDelta = scaleBefore - ImGui.GetIO().FontGlobalScale;
-                }
+                ImGui.SliderFloat("Zoom", ref ImGui.GetIO().FontGlobalScale, 0.1f, 2f, "%.2f");
                 ImGui.EndMainMenuBar();
             }
 

@@ -2,11 +2,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using UnityEditor;
 using UnityEngine;
 
 namespace Stagehand {
 	public class Stageographer : MonoBehaviour {
+		// By defining, instantiating, and referencing the size of the "vanilla" IEnumerator, we're able to skip the
+		// language level implemented fields and only show the end user what they care about.
+		// TODO: Should this be configurable through a toggle?
 		private static IEnumerator _vanilla() {
 			yield break;
 		}
@@ -14,14 +16,17 @@ namespace Stagehand {
 		private static readonly int _skipVanillaFields = __vanilla.GetType().GetFields().Length;
 
 		private void Awake() {
-			if (!EditorApplication.isPlaying) return;
-
+			// Graph is flat: top to bottom, left to right.
+			// TODO: HACK: Replace with Stage<Node> syntax!
 			var graph = new List<Choreographer.Node>();
+
+			// Parent trap! Reference of lineage to prevent recursion.
 			var parents = new HashSet<Type>();
-			(int, List<Choreographer.Node> children) _addChildren(IEnumerable<Type> types, Choreographer.Node parent = null, int row = 0, int column = 0) {
-				var prevParent = parent;
-				foreach (var type in types) {
-					// Parent
+
+			// Recursively add children to a parent.
+			int _addChildren(Choreographer.Node parent, IEnumerable<Type> childTypes, int row = 0, int column = 0) {
+				foreach (var childType in childTypes) {
+					// Inputs
 					var inputs = new List<Choreographer.NodeIO>();
 					/*foreach (var methodInfo in type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public)) {
 						string methodName;
@@ -33,35 +38,38 @@ namespace Stagehand {
 						outputs.Add(new Choreographer.NodeIO(methodInfo.ReturnType, methodName));
 					}*/
 					
+					// Outputs
 					var outputs = new List<Choreographer.NodeIO>();
-					foreach (var fieldInfo in type.GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public)) {
+					foreach (var fieldInfo in childType.GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public)) {
 						outputs.Add(new Choreographer.NodeIO(fieldInfo.FieldType, fieldInfo.Name));
 					}
-					
-					var node = new Choreographer.Node(type, inputs.ToArray(), outputs.ToArray(), row, column);
+
+					// Parent
+					var node = new Choreographer.Node(childType, inputs.ToArray(), outputs.ToArray(), row, column);
 					graph.Add(node);
+					//Stage<Choreographer.Node>.Hand(ref node);
 
 					// Relationship
 					if (parent != null) node.Connections.Add(new Choreographer.Connection(Choreographer.Connection.ConnectionType.Inherited, parent));
 
 					// Infinite Recursion
-					if (parents.Contains(type)) {
+					if (parents.Contains(childType)) {
 						node.Connections.Add(new Choreographer.Connection(Choreographer.Connection.ConnectionType.Recursive, parent));
 						++row;
 						continue;
 					}
 
 					// Stagehand Queues
-					parent = node;
-					var actionPairs = Stage._GetQueue(type);
+					var prevNode = node;
+					var actionPairs = Stage._GetQueue(childType);
 					foreach (var actionPair in actionPairs) {
 						foreach (var action in actionPair.Value) {
 							// Inputs
 							var actionInputs = new List<Choreographer.NodeIO>();
 							var actionType = action.GetType();
-							var fields = actionType.GetFields();
-							for (var i = _skipVanillaFields; i < fields.Length; ++i) {
-								actionInputs.Add(new Choreographer.NodeIO(fields[i].FieldType, fields[i].Name));
+							var actionFields = actionType.GetFields();
+							for (var i = _skipVanillaFields; i < actionFields.Length; ++i) {
+								actionInputs.Add(new Choreographer.NodeIO(actionFields[i].FieldType, actionFields[i].Name));
 							}
 
 							// Outputs
@@ -70,12 +78,13 @@ namespace Stagehand {
 							// Child
 							var actionNode = new Choreographer.Node(actionType, actionInputs.ToArray(), actionOutputs.ToArray(), row, ++column);
 							graph.Add(actionNode);
+							//Stage<Choreographer.Node>.Hand(ref actionNode);
 
 							// Relationship
-							actionNode.Connections.Add(new Choreographer.Connection(Choreographer.Connection.ConnectionType.Inherited, parent));
+							actionNode.Connections.Add(new Choreographer.Connection(Choreographer.Connection.ConnectionType.Inherited, prevNode));
 
 							// "Parent" of Next Child
-							parent = actionNode;
+							prevNode = actionNode;
 						}
 
 						// Carriage Return
@@ -84,22 +93,26 @@ namespace Stagehand {
 
 					// Next!
 					++row;
-					parent = prevParent;
 
 					// Leaf
-					if (!Stage.Relationships.TryGetValue(type, out var children)) {
+					if (!Stage.Relationships.TryGetValue(childType, out var children)) {
 						continue;
 					}
 
 					// Children
-					parents.Add(type);
-					List<Choreographer.Node> childNodes;
-					(row, childNodes) = _addChildren(children, node, row, column + 1);
-					parents.Remove(type);
+					parents.Add(childType);
+					row = _addChildren(node, children, row, column + 1);
+					parents.Remove(childType);
 				}
-				return (row, null);
+
+				// Finished!
+				return row;
 			}
-			_addChildren(Stage.Children);
+
+			// Build the Graph!
+			_addChildren(null, Stage.Children);
+
+			// TODO: HACK: How should we communicate with Choreographer?
 			Choreographer.Nodes = graph.ToArray();
 		}
 	}
